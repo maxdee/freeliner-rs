@@ -16,7 +16,7 @@ impl Context {
         // self.new_group();
         let mut g = SegmentGroup {id: 0, segments: Vec::new(),};
 
-        g.add_seg(Point::new(10.0, 10.0, 0.0), Point::new(100.0, 100.0, 0.0));
+        g.add_seg(Point::new(10.0, 200.0, 0.0), Point::new(100.0, 200.0, 0.0));
         self.groups.push(g);
         // let mut seg = SegmentTypes::straight(StraightSegment{ a: Point::new(10.0, 10.0, 0.0),
         //                                                       b: });
@@ -27,7 +27,9 @@ impl Context {
     // pub fn get_group(&self, i: u32) -> Option<SegmentGroup> {
     //     self.groups.get(i)
     // }
-
+    // pub fn left_click(&mut self, x: f64, y: f64){
+    //     let ppoint self.groups[0].
+    // }
     pub fn new_group(&mut self) {
         let index = self.groups.len() as u32;
         let mut g = SegmentGroup {id: index, segments: Vec::new(),};

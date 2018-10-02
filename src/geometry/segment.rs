@@ -12,6 +12,10 @@ pub enum SegmentType {
     nested,
 }
 
+// impl SegmentType {
+//     fn get_pos(&self, u: f64) -> Point{}
+// }
+
 #[derive(Debug)]
 pub struct StraightSegment {
     pub a: Point,
