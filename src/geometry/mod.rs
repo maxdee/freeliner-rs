@@ -4,63 +4,73 @@ pub use self::segment::*;
 pub mod point;
 pub mod segment;
 
-#[derive(Debug)]
-pub struct Context {
-    pub groups : Vec<SegmentGroup>,
+#[derive(Default)]
+pub struct Data {
+    pub groups: Vec<SegmentGroup>,
 }
 
-
-impl Context {
-    pub fn start(&mut self){
-        // add a segment group
-        // self.new_group();
-        let mut g = SegmentGroup {id: 0, segments: Vec::new(),};
-
-        g.add_seg(Point::new(10.0, 200.0, 0.0), Point::new(100.0, 200.0, 0.0));
-        self.groups.push(g);
-        // let mut seg = SegmentTypes::straight(StraightSegment{ a: Point::new(10.0, 10.0, 0.0),
-        //                                                       b: });
-        // group.segments.push(seg);
-        // self.groups.push(group);
+impl Data {
+    // make new data
+    pub fn new() -> Data {
+        Default::default()
+    }
+    // access data
+    pub fn get_group(&mut self, index: usize) -> Option<&mut SegmentGroup> {
+        if self.has_index(index) {
+            Some(&mut self.groups[index])
+        } else {
+            None
+        }
     }
 
-    // pub fn get_group(&self, i: u32) -> Option<SegmentGroup> {
-    //     self.groups.get(i)
-    // }
-    // pub fn left_click(&mut self, x: f64, y: f64){
-    //     let ppoint self.groups[0].
-    // }
-    pub fn new_group(&mut self) {
-        let index = self.groups.len() as u32;
-        let mut g = SegmentGroup {id: index, segments: Vec::new(),};
-        self.groups.push(g);
+    pub fn has_index(&self, index: usize) -> bool {
+        index < self.groups.len()
     }
-
-    // pub fn get_last_group<'a>(self) -> &'a mut Option<SegmentGroup> {
-    //     // self.groups.get(self.groups.len()-1)
-    //     // None
-    // }
-
-    // fn save(&self, path: String) {
-    //
-    // }
-    //
-    // fn load(&mut self, path: String) {
-    //
-    // }
-
 }
 
-#[derive(Debug)]
-pub struct SegmentGroup {
-    id: u32,
-    pub segments: Vec<SegmentType>,
+////////////////////////////////////////////////////////////
+// #[derive(Debug)]
+// #[derive(Default)]
+pub struct Handler {
+    pub cursor_position: Point,
+    pub previous_point: Point,
+    pub selected_group_index: usize,
 }
 
-impl SegmentGroup {
-    pub fn add_seg(&mut self, a: Point, b: Point){
-        let mut seg = SegmentType::straight(StraightSegment{ a: a, b: b});
-        self.segments.push(seg);
+impl Default for Handler {
+    fn default() -> Self {
+        Self::new()
     }
-    // pub fn get_segment(i: u32) -> Option
+}
+
+impl Handler {
+    pub fn new() -> Handler {
+        Handler {
+            cursor_position: Point::new_2d(0.0, 0.0),
+            previous_point: Point::new_2d(0.0, 0.0),
+            selected_group_index: 0,
+        }
+    }
+
+    pub fn mouse_moved(&mut self, x: f32, y: f32) {
+        let p = Point::new_2d(x, y);
+        self.cursor_position.set(&p);
+    }
+
+    pub fn left_click(&mut self, data: &mut Data, x: f32, y: f32) {
+        if !data.has_index(self.selected_group_index) {
+            // let mut sg = ;
+            data.groups.push(SegmentGroup::new(self.selected_group_index));
+        }
+        // try to access selected group
+        if let Some(sg) = data.get_group(self.selected_group_index) {
+            let click = Point::new_2d(x, y);
+            let mut seg = StraightSegment::new(&self.previous_point, &click);
+            // println!("new seg {:?}", seg);
+            sg.segments.push(seg);
+            self.previous_point.set(&click);
+        }
+        // selected_group.left_click(x,y);
+        // println!("made a new group {}", selected_group.index);
+    }
 }
