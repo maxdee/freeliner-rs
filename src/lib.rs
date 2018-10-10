@@ -18,13 +18,27 @@ pub mod cmd;
 // instance submodule,
 // pub mod instance;
 
-pub use self::geometry::{Data, Handler};
+pub use self::geometry::{Data};
 pub use self::timer::Timer;
 pub use self::input::Input;
 
 pub struct Freeliner {
-    timer : Timer,
-    geometric_data: geometry::Data,
-    geometric_handler: geometry::Handler,
+    pub input: Input,
+    pub state: State,
+}
+impl Freeliner {
+    pub fn new() -> Self{
+        Freeliner{input: Input::new(), state: State::new()}
+    }
+}
 
+pub struct State {
+    timer : Timer,
+    pub geometric_data: geometry::Data,
+}
+
+impl State {
+    fn new() -> Self {
+        State {timer: Timer::new(), geometric_data: geometry::Data::new()}
+    }
 }

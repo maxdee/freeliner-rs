@@ -14,6 +14,12 @@ pub struct Point {
     pub z: f32,
 }
 
+impl Default for Point {
+    fn default() -> Self {
+        Self{x: 0.0, y: 0.0, z: 0.0}
+    }
+}
+
 impl Point {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Point { x, y, z }

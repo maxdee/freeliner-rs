@@ -4,8 +4,8 @@ use super::point::*;
 pub struct SegmentGroup {
     pub index: usize,
     pub segments: Vec<StraightSegment>,
-    previous_point: Option<Point>,
-    is_selected: bool,
+    pub previous_point: Option<Point>,
+    pub is_selected: bool,
 }
 
 impl SegmentGroup {
@@ -13,7 +13,7 @@ impl SegmentGroup {
         SegmentGroup {
             index,
             segments: Vec::new(),
-            previous_point: None,
+            previous_point: None,//Point::new(-1.4242, 0.0,0.0),
             is_selected: false,
         }
     }
