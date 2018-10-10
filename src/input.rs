@@ -8,20 +8,59 @@ pub use super::State;
 pub struct Input{
     cursor_position: Point,
     selected_group_index: usize,
+    cursor_line: (Point, Point),
+    // command_logger: Vec<C>
 }
+
+pub const LEFT_BUTTON: usize = 1;
+pub const RIGHT_BUTTON: usize = 2;
+pub const MIDDLE_BUTTON: usize = 3;
+
+
 
 impl Input {
     pub fn new() -> Input {
-        Input{cursor_position: Point::default(), selected_group_index : 0}
+        Input{
+            cursor_position: Point::default(),
+            selected_group_index : 0,
+            cursor_line: (Point::default(), Point::default()),
+        }
     }
 
-    pub fn mouse_pressed(&mut self, state: &mut State, button: u8, pos: Point){
+    // pub fn key_pressed(&mut self, state: &mut State, ){
+    //
+    // }
+
+    pub fn mouse_pressed(&mut self, state: &mut State, button: usize, pos: Point){
         println!("Pressed {} at {:?}", button, pos);
+        match button {
+            LEFT_BUTTON => self.handle_left_click(state, pos),
+            RIGHT_BUTTON => self.handle_right_click(state, pos),
+            MIDDLE_BUTTON => self.handle_middle_click(state, pos),
+            _ => (),
+        }
+    }
+
+    fn handle_left_click(&mut self, state: &mut State, pos: Point) {
         AddPoint::new(self.selected_group_index, pos).execute(state);
     }
 
+    fn handle_right_click(&mut self, state: &mut State, pos: Point) {
+        RemovePoint::new(self.selected_group_index, pos).execute(state);
+    }
+
+    fn handle_middle_click(&mut self, state: &mut State, pos: Point) {
+        NewGroup::new().execute(state);
+        self.selected_group_index = state.geometric_data.groups.len()-1;
+    }
+
+
     pub fn mouse_moved(&mut self, pos: Point) {
         self.cursor_position.set(&pos);
+    }
+
+    pub fn prep_for_gui(&mut self) {
+        // cursor_line.1 =
     }
 
 

@@ -41,32 +41,72 @@ impl AddPoint {
 
 	pub fn execute(&mut self, state: &mut State) -> Result<(), &str> {
 		let group = &mut state.geometric_data.groups[self.index];
-		let mut flag = false;
 		if group.previous_point.is_some(){
-		// if let Some(p_point) = &mut group.previous_point {
-			// let p_point = group.previous_point.unwrap();
 			let mut seg = StraightSegment::new(
 				group.previous_point.as_ref().unwrap(),
 				&self.new_point
 			);
 			group.segments.push(seg);
 			group.previous_point.as_mut().unwrap().set(&self.new_point);
-			// flag = true;
 		} else {
-			// let mut seg = StraightSegment::new(&self.new_point, &self.new_point);
-			// group.segments.push(seg);
 			group.previous_point = Some(Point::copy(&self.new_point));
 		}
-		// if !flag {
-		// 	group.previous_point = Some(Point::copy(&self.new_point));
-		// }
-
-			// self.group.previous_point.as_mut().unwrap().set(&p);// = Some(p);
-
 		Ok(())
 	}
 }
 
+
+pub struct RemovePoint {
+	// pub group: &mut SegmentGroup,
+	pub index : usize,
+	pub new_point: Point,
+}
+
+impl RemovePoint {
+	pub fn new(index: usize, new_point : Point) -> Self {
+		Self{index, new_point}
+	}
+
+	pub fn execute(&mut self, state: &mut State) -> Result<(), &str> {
+		let group = &mut state.geometric_data.groups[self.index];
+		// match group.segments.len() {
+		// 	0 => (),
+		// 	1 =>
+		// 	n => Some(&self[n-1])
+		// }
+		if group.segments.len() > 0 {
+			group.segments.pop();
+			if group.segments.len() == 0 {
+				group.previous_point = None;
+			} else {
+				group.previous_point.as_mut().unwrap().set(
+					&group.segments[group.segments.len()-1].b
+				);
+			}
+		}
+		else {
+			return Err("no points to remove");
+		}
+		Ok(())
+	}
+}
+
+
+pub struct NewGroup{}
+
+impl NewGroup {
+	pub fn new() -> Self {
+		Self{}
+	}
+
+	pub fn execute(&self, state: &mut State) -> Result<(), &str> {
+		let mut sg = SegmentGroup::new(
+			state.geometric_data.groups.len()
+		);
+		state.geometric_data.groups.push(sg);
+		Ok(())
+	}
+}
 // impl Command for AddPoint {
 // 	// fn execute(&mut self, state: State) -> Result<(), &str> {
 // 	// 	let &mut group = &mut state.geometric_data.groups[self.index];
