@@ -6,32 +6,47 @@ pub mod segment;
 
 pub const NONE_GROUP: usize = 0;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Data {
-    pub groups: Vec<SegmentGroup>,
+    pub points: Vec<Point>,
+    pub segs: Vec<Segment>,
+    pub groups: Vec<Group>,
 }
 
 impl Data {
     // make new data
     pub fn new() -> Self {
-        let mut d = Data{groups : Vec::new()};
-        d.groups.push(SegmentGroup::new(0));
-        d
-    }
-    // access data
-    pub fn get_group(&mut self, index: usize) -> Option<&mut SegmentGroup> {
-        if self.has_index(index) {
-            Some(&mut self.groups[index])
-        } else {
-            None
+        Self{
+            points: Vec::new(),
+            segs: Vec::new(),
+            groups: Vec::new(),
         }
     }
-
-    pub fn has_index(&self, index: usize) -> bool {
-        index < self.groups.len()
-    }
+    // access data
 }
 
+// flat flat
+#[derive(Debug)]
+pub struct Segment {
+    pub point_a: usize,
+    pub point_b: usize,
+}
+
+impl Segment {
+    pub fn new(point_a: usize, point_b: usize) -> Self {
+        Self{point_a, point_b}
+    }
+}
+#[derive(Debug)]
+pub struct Group {
+    pub segments: Vec<usize>,
+    pub previous_point: Option<Point>,
+}
+impl Group {
+    pub fn new() -> Self{
+        Self{segments: Vec::new(), previous_point: None}
+    }
+}
 ////////////////////////////////////////////////////////////
 // #[derive(Debug)]
 // #[derive(Default)]

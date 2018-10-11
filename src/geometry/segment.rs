@@ -3,7 +3,7 @@ use super::point::*;
 #[derive(Debug)]
 pub struct SegmentGroup {
     pub index: usize,
-    pub segments: Vec<StraightSegment>,
+    pub segments: Vec<usize>,
     pub previous_point: Option<Point>,
     pub is_selected: bool,
 }

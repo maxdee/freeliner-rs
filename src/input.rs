@@ -60,7 +60,7 @@ impl Input {
         match key {
             key if key == VirtualKeyCode::N as u32 => {
                 NewGroup::new().execute(state);
-                self.selected_group_index = state.geometric_data.groups.len()-1;
+                self.selected_group_index = state.geom.groups.len()-1;
             },
             _ => {},
         }

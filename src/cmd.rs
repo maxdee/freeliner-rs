@@ -57,13 +57,15 @@ impl AddPointCmd {
 
 impl Command for AddPointCmd {
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
-		let group = &mut state.geometric_data.groups[self.index];
+		let group = &mut state.geom.groups[self.index];
 		if group.previous_point.is_some(){
-			let mut seg = StraightSegment::new(
-				group.previous_point.as_ref().unwrap(),
-				&self.new_point
-			);
-			group.segments.push(seg);
+			state.geom.points.push(Point::copy(group.previous_point.as_ref().unwrap()));
+			state.geom.points.push(Point::copy(&self.new_point));
+			let index = state.geom.points.len()-1;
+			// add a new segment
+			state.geom.segs.push(Segment::new(index-1, index));
+			// add the segment to the group
+			group.segments.push(state.geom.segs.len());
 			group.previous_point.as_mut().unwrap().set(&self.new_point);
 		} else {
 			group.previous_point = Some(Point::copy(&self.new_point));
@@ -88,14 +90,16 @@ impl RemovePoint {
 
 impl Command for RemovePoint {
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
-		let group = &mut state.geometric_data.groups[self.index];
+		let group = &mut state.geom.groups[self.index];
 		if group.segments.len() > 0 {
 			group.segments.pop();
 			if group.segments.len() == 0 {
 				group.previous_point = None;
 			} else {
 				group.previous_point.as_mut().unwrap().set(
-					&group.segments[group.segments.len()-1].b
+					&state.geom.points[
+						state.geom.segs[group.segments[group.segments.len()-1]].point_b
+					]
 				);
 			}
 		}
@@ -122,7 +126,7 @@ impl BreakLine {
 
 impl Command for BreakLine {
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
-		let group = &mut state.geometric_data.groups[self.index];
+		let group = &mut state.geom.groups[self.index];
 		group.previous_point.as_mut().unwrap().set(&self.new_point);
 		Ok(())
 	}
@@ -140,10 +144,7 @@ impl NewGroup {
 
 impl Command for NewGroup {
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
-		let mut sg = SegmentGroup::new(
-			state.geometric_data.groups.len()
-		);
-		state.geometric_data.groups.push(sg);
+		state.geom.groups.push(Group::new());
 		Ok(())
 	}
 }

@@ -34,11 +34,11 @@ impl Freeliner {
 
 pub struct State {
     timer : Timer,
-    pub geometric_data: geometry::Data,
+    pub geom: geometry::Data,
 }
 
 impl State {
     fn new() -> Self {
-        State {timer: Timer::new(), geometric_data: geometry::Data::new()}
+        State {timer: Timer::new(), geom: geometry::Data::new()}
     }
 }
