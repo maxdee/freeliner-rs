@@ -8,6 +8,7 @@ trait Command {
 	fn execute(&mut self) -> Result<(), &str>;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
 
 struct LoadGeomCmd<'a> {
 	filepath: &'a str,
@@ -27,6 +28,7 @@ impl<'a> Command for LoadGeomCmd<'a> {
 	}
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct AddPoint {
 	// pub group: &mut SegmentGroup,
@@ -55,6 +57,7 @@ impl AddPoint {
 	}
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct RemovePoint {
 	// pub group: &mut SegmentGroup,
@@ -91,6 +94,27 @@ impl RemovePoint {
 	}
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+
+pub struct BreakLine {
+	// pub group: &mut SegmentGroup,
+	pub index : usize,
+	pub new_point: Point,
+}
+
+impl BreakLine {
+	pub fn new(index: usize, new_point : Point) -> Self {
+		Self{index, new_point}
+	}
+
+	pub fn execute(&mut self, state: &mut State) -> Result<(), &str> {
+		let group = &mut state.geometric_data.groups[self.index];
+		group.previous_point.as_mut().unwrap().set(&self.new_point);
+		Ok(())
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct NewGroup{}
 
