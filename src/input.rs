@@ -12,11 +12,10 @@ pub struct Input{
     // command_logger: Vec<C>
 }
 
+// use enum instead
 pub const LEFT_BUTTON: usize = 1;
 pub const RIGHT_BUTTON: usize = 2;
 pub const MIDDLE_BUTTON: usize = 3;
-
-
 
 impl Input {
     pub fn new() -> Input {
@@ -42,7 +41,7 @@ impl Input {
     }
 
     fn handle_left_click(&mut self, state: &mut State, pos: Point) {
-        AddPoint::new(self.selected_group_index, pos).execute(state);
+        AddPointCmd::new(self.selected_group_index, pos).execute(state);
     }
 
     fn handle_right_click(&mut self, state: &mut State, pos: Point) {
