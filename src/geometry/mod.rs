@@ -37,11 +37,13 @@ impl Segment {
         Self{point_a, point_b}
     }
 }
+
 #[derive(Debug)]
 pub struct Group {
     pub segments: Vec<usize>,
     pub previous_point: Option<Point>,
 }
+
 impl Group {
     pub fn new() -> Self{
         Self{segments: Vec::new(), previous_point: None}

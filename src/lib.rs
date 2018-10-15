@@ -26,6 +26,7 @@ pub struct Freeliner {
     pub input: Input,
     pub state: State,
 }
+
 impl Freeliner {
     pub fn new() -> Self{
         Freeliner{input: Input::new(), state: State::new()}

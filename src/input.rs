@@ -2,14 +2,13 @@ pub use geometry::Point;
 pub use cmd::*;
 pub use super::State;
 
-
-
 #[derive(Default)]
 pub struct Input{
     cursor_position: Point,
     selected_group_index: usize,
     cursor_line: (Point, Point),
-    // command_logger: Vec<C>
+    command_log: Vec<Box<Command>>,
+    snap_distance: u32,
 }
 
 // use enum instead
@@ -17,19 +16,32 @@ pub const LEFT_BUTTON: usize = 1;
 pub const RIGHT_BUTTON: usize = 2;
 pub const MIDDLE_BUTTON: usize = 3;
 
+// fn unbox<T>(value: Box<T>) -> T {
+//     *value
+// }
+
 impl Input {
+
     pub fn new() -> Input {
         Input{
             cursor_position: Point::default(),
             selected_group_index : 0,
             cursor_line: (Point::default(), Point::default()),
+            command_log: Vec::new(),
+            snap_distance: 10,
         }
     }
 
-    // pub fn key_pressed(&mut self, state: &mut State, ){
-    //
-    // }
+    // pub fn exec_cmd(&mut self, state: &mut State, mut bx: Box<Command>){
+    pub fn exec_cmd<T: 'static>(&mut self, state: &mut State, mut cmd: T)
+    where T: Command
+    {
+        cmd.execute(state);
+        self.command_log.push(Box::new(cmd));
+    }
 
+
+    /// Input mouse press event into freeliner.
     pub fn mouse_pressed(&mut self, state: &mut State, button: usize, pos: Point){
         println!("Pressed {} at {:?}", button, pos);
         match button {
@@ -38,29 +50,46 @@ impl Input {
             MIDDLE_BUTTON => self.handle_middle_click(state, pos),
             _ => (),
         }
+        // println!("{:#?}", state.geom);
     }
 
     fn handle_left_click(&mut self, state: &mut State, pos: Point) {
-        AddPointCmd::new(self.selected_group_index, pos).execute(state);
+        let index = self.selected_group_index;
+        self.exec_cmd( state, AddPointCmd::new(index, pos));
     }
 
     fn handle_right_click(&mut self, state: &mut State, pos: Point) {
-        RemovePoint::new(self.selected_group_index, pos).execute(state);
+        let index = self.selected_group_index;
+        self.exec_cmd(state, RemovePoint::new(index, pos));
     }
 
     fn handle_middle_click(&mut self, state: &mut State, pos: Point) {
-        BreakLine::new(self.selected_group_index, pos).execute(state);
+        let index = self.selected_group_index;
+        self.exec_cmd(state, BreakLine::new(index, pos));
     }
 
-    pub fn mouse_moved(&mut self, pos: Point) {
+    pub fn mouse_moved(&mut self, state: &State, pos: Point) {
         self.cursor_position.set(&pos);
+        self.snapping(state, &pos);
+    }
+
+    pub fn snapping(&mut self, state: &State, pos: &Point) {
+        let snapped : Vec<usize> = state.geom.points.iter()
+            .enumerate()
+            .filter(|point| { point.1.dist(&pos) < self.snap_distance as f32})
+            .map(|point| {point.0})
+            .collect();
+        // println!("{:#?}", snapped);
     }
 
     pub fn key_pressed(&mut self, state: &mut State, key: u32) {
         match key {
             key if key == VirtualKeyCode::N as u32 => {
-                NewGroup::new().execute(state);
+                self.exec_cmd(state, NewGroup::new());
                 self.selected_group_index = state.geom.groups.len()-1;
+            },
+            key if key == VirtualKeyCode::L as u32 => {
+                // println!("{:#?}", self.command_log);
             },
             _ => {},
         }

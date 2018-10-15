@@ -3,9 +3,11 @@ pub use super::State;
 // in this command pattern, I would need to have indexes or keys to args
 
 pub trait Command {
+	// const NAME: &str;
 	// fn execute<T>(&self, args: T) -> Result<(), &str> where T: GenericData;
 	// fn execute<T>(&self, args: T) -> Result<(), &str>;
 	fn execute(&mut self, state: &mut State) -> Result<(), &str>;
+	fn get_name(&self) -> &'static str;
 }
 
 // pub enum Cmd {
@@ -42,7 +44,7 @@ pub trait Command {
 // }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-
+#[derive(Debug)]
 pub struct AddPointCmd {
 	// pub group: &mut SegmentGroup,
 	pub index : usize,
@@ -56,8 +58,10 @@ impl AddPointCmd {
 }
 
 impl Command for AddPointCmd {
+	// const NAME: &str = "addpoint";
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
 		let group = &mut state.geom.groups[self.index];
+		// do this better
 		if group.previous_point.is_some(){
 			state.geom.points.push(Point::copy(group.previous_point.as_ref().unwrap()));
 			state.geom.points.push(Point::copy(&self.new_point));
@@ -72,10 +76,13 @@ impl Command for AddPointCmd {
 		}
 		Ok(())
 	}
+	fn get_name(&self) -> &'static str {
+		"addpoint"
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-
+#[derive(Debug)]
 pub struct RemovePoint {
 	// pub group: &mut SegmentGroup,
 	pub index : usize,
@@ -108,10 +115,13 @@ impl Command for RemovePoint {
 		}
 		Ok(())
 	}
+	fn get_name(&self) -> &'static str {
+		"removepoint"
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-
+#[derive(Debug)]
 pub struct BreakLine {
 	// pub group: &mut SegmentGroup,
 	pub index : usize,
@@ -130,10 +140,13 @@ impl Command for BreakLine {
 		group.previous_point.as_mut().unwrap().set(&self.new_point);
 		Ok(())
 	}
+	fn get_name(&self) -> &'static str {
+		"breakline"
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-
+#[derive(Debug)]
 pub struct NewGroup{}
 
 impl NewGroup {
@@ -146,6 +159,9 @@ impl Command for NewGroup {
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
 		state.geom.groups.push(Group::new());
 		Ok(())
+	}
+	fn get_name(&self) -> &'static str {
+		"newgroup"
 	}
 }
 
