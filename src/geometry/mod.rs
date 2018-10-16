@@ -22,7 +22,6 @@ impl Data {
             groups: Vec::new(),
         }
     }
-    // access data
 }
 
 // flat flat
@@ -41,7 +40,7 @@ impl Segment {
 #[derive(Debug)]
 pub struct Group {
     pub segments: Vec<usize>,
-    pub previous_point: Option<Point>,
+    pub previous_point: Option<usize>,
 }
 
 impl Group {

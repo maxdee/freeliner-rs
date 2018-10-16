@@ -1,25 +1,5 @@
 use super::point::*;
 
-#[derive(Debug)]
-pub struct SegmentGroup {
-    pub index: usize,
-    pub segments: Vec<usize>,
-    pub previous_point: Option<Point>,
-    pub is_selected: bool,
-}
-
-impl SegmentGroup {
-    pub fn new(index: usize) -> SegmentGroup {
-        SegmentGroup {
-            index,
-            segments: Vec::new(),
-            previous_point: None,//Point::new(-1.4242, 0.0,0.0),
-            is_selected: false,
-        }
-    }
-    // only accessors??
-}
-
 pub trait SegStuff {
     // or get_pos trait???
     fn get_pos(&self, u: f32) -> Point;

@@ -10,19 +10,6 @@ pub trait Command {
 	fn get_name(&self) -> &'static str;
 }
 
-// pub enum Cmd {
-// 	//AddPoint(AddPointCmd),
-// 	// AddPoint(usize, Point), // index and new point
-// 	AddPoint{index: usize, new_point: Point}, // anonymous struct
-//
-// }
-//
-// impl Cmd {
-// 	fn execute(&mut self, state: &mut State) -> Result<(), &str>{
-// 		Ok(())
-// 	}
-// }
-
 /////////////////////////////////////////////////////////////////////////////////////////
 
 // struct LoadGeomCmd<'a> {
@@ -57,23 +44,42 @@ impl AddPointCmd {
 	}
 }
 
+// access data
+pub fn get_group(state: &mut State, index: usize) -> Result<&mut Group, &str> {
+	if index < state.geom.groups.len() {
+		Ok(&mut state.geom.groups[index])
+	} else {
+		Err("no such group")
+	}
+}
+
 impl Command for AddPointCmd {
 	// const NAME: &str = "addpoint";
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
-		let group = &mut state.geom.groups[self.index];
+		// let group = get_group(state, self.index)?;
 		// do this better
+		if self.index >= state.geom.groups.len() {
+			return Err("no such group");
+		}
+
+		let group = &mut state.geom.groups[self.index];
+		state.geom.points.push(Point::copy(&self.new_point));
+
+		let new_index = state.geom.points.len()-1;
+
 		if group.previous_point.is_some(){
-			state.geom.points.push(Point::copy(group.previous_point.as_ref().unwrap()));
-			state.geom.points.push(Point::copy(&self.new_point));
-			let index = state.geom.points.len()-1;
+			// push the new point, but if is snapped, then dont...
 			// add a new segment
-			state.geom.segs.push(Segment::new(index-1, index));
+			state.geom.segs.push(Segment::new(
+				group.previous_point.unwrap(),
+				new_index
+			));
 			// add the segment to the group
 			group.segments.push(state.geom.segs.len());
-			group.previous_point.as_mut().unwrap().set(&self.new_point);
+			// group.previous_point = Some(new_index);
 		} else {
-			group.previous_point = Some(Point::copy(&self.new_point));
 		}
+		group.previous_point = Some(new_index);
 		Ok(())
 	}
 	fn get_name(&self) -> &'static str {
@@ -103,11 +109,8 @@ impl Command for RemovePoint {
 			if group.segments.len() == 0 {
 				group.previous_point = None;
 			} else {
-				group.previous_point.as_mut().unwrap().set(
-					&state.geom.points[
-						state.geom.segs[group.segments[group.segments.len()-1]].point_b
-					]
-				);
+				group.previous_point =
+					Some(state.geom.segs[group.segments[group.segments.len()-1]].point_a);
 			}
 		}
 		else {
@@ -137,7 +140,9 @@ impl BreakLine {
 impl Command for BreakLine {
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
 		let group = &mut state.geom.groups[self.index];
-		group.previous_point.as_mut().unwrap().set(&self.new_point);
+		state.geom.points.push(Point::copy(&self.new_point));
+		let new_index = state.geom.points.len()-1;
+		group.previous_point = Some(new_index);
 		Ok(())
 	}
 	fn get_name(&self) -> &'static str {
@@ -165,7 +170,32 @@ impl Command for NewGroup {
 	}
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
+pub struct NudgePoint {
+	// pub group: &mut SegmentGroup,
+	pub index : usize,
+	pub nudge: Point,
+}
 
+impl NudgePoint {
+	pub fn new(index: usize, nudge : Point) -> Self {
+		Self{index, nudge}
+	}
+}
+
+impl Command for NudgePoint {
+	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
+		// let mut point = &mut
+		let i = self.index;
+		state.geom.points[i] += &self.nudge;
+		// point += self.nudge;
+		Ok(())
+	}
+	fn get_name(&self) -> &'static str {
+		"NudgePoint"
+	}
+}
 
 // impl Command for AddPoint {
 // 	// fn execute(&mut self, state: State) -> Result<(), &str> {

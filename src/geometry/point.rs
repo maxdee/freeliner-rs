@@ -1,3 +1,5 @@
+use std::ops::{AddAssign, MulAssign};
+
 #[test]
 fn test_point_lerp() {
     let point_a = Point::new(0.0, 0.0, 0.0);
@@ -52,6 +54,37 @@ impl Point {
         Point::new(lerp(a.x, b.x, u), lerp(a.y, b.y, u), lerp(a.z, b.z, u))
     }
 }
+
+impl<'a> AddAssign<&'a Point> for Point {
+    fn add_assign(&mut self, other: &Point) { // why not &Point
+        *self = Point {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+        };
+    }
+}
+
+impl<'a> MulAssign<&'a Point> for Point {
+    fn mul_assign(&mut self, other: &Point) { // why not &Point
+        *self = Point {
+            x: self.x * other.x,
+            y: self.y * other.y,
+            z: self.z * other.z,
+        };
+    }
+}
+// impl MulAssign for Point {
+//     type Input = f32;
+//     fn mul_assign(&mut self, other: Point) { // why not &Point
+//         *self = Point {
+//             x: self.x * other.x,
+//             y: self.y * other.y,
+//             z: self.z * other.z,
+//         };
+//     }
+// }
+
 
 fn lerp(a: f32, b: f32, u: f32) -> f32 {
     if a < b {
