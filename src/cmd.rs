@@ -2,12 +2,45 @@ pub use geometry::*;
 pub use super::State;
 // in this command pattern, I would need to have indexes or keys to args
 
+pub struct CommandConsumer {
+	command_log: Vec<Box<Command>>,
+	// fn parse_from_osc?
+	// implement command recording/playing
+}
+
+impl CommandConsumer {
+	pub fn new() -> Self {
+		Self{command_log: Vec::new(),}
+	}
+
+	// pub fn exec_cmd(&mut self, state: &mut State, mut bx: Box<Command>){
+	pub fn exec<T: 'static>(&mut self, state: &mut State, mut cmd: T)
+		where T: Command
+	{
+		cmd.execute(state).unwrap_or_else(|err| {
+			// eprintln!("CMD Fail : {}", err)
+			println!("CMD Fail : {}", err)
+		});
+		println!("{}", cmd.to_string());
+		self.command_log.push(Box::new(cmd));
+	}
+	pub fn get_log(&self) -> Vec<String> {
+		self.command_log.iter().map(|cmd| cmd.to_string()).collect()
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
 pub trait Command {
 	// const NAME: &str;
 	// fn execute<T>(&self, args: T) -> Result<(), &str> where T: GenericData;
 	// fn execute<T>(&self, args: T) -> Result<(), &str>;
 	fn execute(&mut self, state: &mut State) -> Result<(), &str>;
-	fn get_name(&self) -> &'static str;
+	// fn get_name(&self) -> &'static str;
+	// fn from_string<T>(args: String) -> Self
+	fn to_string(&self) -> String;
+	// to_json??
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -82,8 +115,11 @@ impl Command for AddPointCmd {
 		group.previous_point = Some(new_index);
 		Ok(())
 	}
-	fn get_name(&self) -> &'static str {
-		"addpoint"
+	// fn get_name(&self) -> &'static str {
+	// 	"addpoint"
+	// }
+	fn to_string(&self) -> String {
+		format!("addpoint -g={} -xy={},{}", self.index, self.new_point.x, self.new_point.y)
 	}
 }
 
@@ -92,12 +128,11 @@ impl Command for AddPointCmd {
 pub struct RemovePoint {
 	// pub group: &mut SegmentGroup,
 	pub index : usize,
-	pub new_point: Point,
 }
 
 impl RemovePoint {
-	pub fn new(index: usize, new_point : Point) -> Self {
-		Self{index, new_point}
+	pub fn new(index: usize) -> Self {
+		Self{index}
 	}
 }
 
@@ -118,8 +153,11 @@ impl Command for RemovePoint {
 		}
 		Ok(())
 	}
-	fn get_name(&self) -> &'static str {
-		"removepoint"
+	// fn get_name(&self) -> &'static str {
+	// 	"removepoint"
+	// }
+	fn to_string(&self) -> String {
+		format!("removepoint -g={}", self.index)
 	}
 }
 
@@ -145,8 +183,11 @@ impl Command for BreakLine {
 		group.previous_point = Some(new_index);
 		Ok(())
 	}
-	fn get_name(&self) -> &'static str {
-		"breakline"
+	// fn get_name(&self) -> &'static str {
+	// 	"breakline"
+	// }
+	fn to_string(&self) -> String {
+		format!("breakline -g={} -xy={},{}", self.index, self.new_point.x, self.new_point.y)
 	}
 }
 
@@ -165,8 +206,11 @@ impl Command for NewGroup {
 		state.geom.groups.push(Group::new());
 		Ok(())
 	}
-	fn get_name(&self) -> &'static str {
-		"newgroup"
+	// fn get_name(&self) -> &'static str {
+	// 	"newgroup"
+	// }
+	fn to_string(&self) -> String {
+		String::from("newgroup")
 	}
 }
 
@@ -192,8 +236,11 @@ impl Command for NudgePoint {
 		// point += self.nudge;
 		Ok(())
 	}
-	fn get_name(&self) -> &'static str {
-		"NudgePoint"
+	// fn get_name(&self) -> &'static str {
+	// 	"NudgePoint"
+	// }
+	fn to_string(&self) -> String {
+		format!("breakline -p={} -xy={},{}", self.index, self.nudge.x, self.nudge.y)
 	}
 }
 
