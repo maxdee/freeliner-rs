@@ -4,7 +4,7 @@ pub use super::State;
 
 pub struct Input{
     pub cursor_position: Point,
-    selected_group_index: usize,
+    pub selected_group_index: usize,
     cursor_line: (Point, Point),
     snap_distance: f32,
     snap_list: Vec<(usize, f32)>,

@@ -203,7 +203,8 @@ impl NewGroup {
 
 impl Command for NewGroup {
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
-		state.geom.groups.push(Group::new());
+		let i = state.geom.groups.len();
+		state.geom.groups.push(Group::new(i));
 		Ok(())
 	}
 	// fn get_name(&self) -> &'static str {
@@ -240,7 +241,7 @@ impl Command for NudgePoint {
 	// 	"NudgePoint"
 	// }
 	fn to_string(&self) -> String {
-		format!("breakline -p={} -xy={},{}", self.index, self.nudge.x, self.nudge.y)
+		format!("nudge -p={} -xy={},{}", self.index, self.nudge.x, self.nudge.y)
 	}
 }
 
