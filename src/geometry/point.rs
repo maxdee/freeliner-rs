@@ -92,9 +92,9 @@ impl<'a> MulAssign<&'a Point> for Point {
 // }
 
 fn lerp(a: f32, b: f32, u: f32) -> f32 {
-    if a < b {
-        a + (b - a) * u
-    } else {
-        b + (b - a) * u
-    }
+    a + (b - a) * u
+    // if a < b {
+    // } else {
+    //     b + (a - b) * u
+    // }
 }

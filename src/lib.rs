@@ -18,9 +18,9 @@ pub mod input;
 // instance submodule,
 // pub mod instance;
 
+pub use self::animate::Animator;
 pub use self::geometry::Data;
 pub use self::input::Input;
-pub use self::animate::Animator;
 
 pub struct Freeliner {
     pub input: Input,

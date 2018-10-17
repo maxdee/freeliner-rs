@@ -1,5 +1,5 @@
 use super::geometry::*;
-
+use std::fmt::Debug;
 pub mod timer;
 pub use self::timer::Timer;
 
@@ -7,6 +7,7 @@ pub use self::timer::Timer;
 //     // fn to_string(&self) -> String;
 // }
 
+#[derive(Debug)]
 pub struct Animator {
     timer: Timer,
     spawner: Spawner,
@@ -17,13 +18,13 @@ impl Animator {
     pub fn new() -> Self {
         let mut spawner = Spawner::new();
         spawner.add_geom(0).add_geom(1).setup_nodes();
-        Self{
+        Self {
             timer: Timer::new(),
             spawner,
             temp: 0.0,
         }
     }
-    pub fn animate(&mut self, geom: &Data) -> Vec<Box<RenderItem>> {
+    pub fn animate(&mut self, geom: &Data) -> Vec<RenderItem> {
         self.temp += 0.01;
         self.temp = self.temp.fract();
         self.spawner.run(self.temp, geom)
@@ -52,8 +53,9 @@ pub enum RenderItem {
     },
 }
 
+#[derive(Debug)]
 pub struct Spawner {
-    items: Vec<Box<RenderItem>>,
+    items: Vec<RenderItem>,
     groups: Vec<usize>,
     nodes: Vec<Box<Node>>,
     life: f32,
@@ -78,41 +80,47 @@ impl Spawner {
         self.nodes.push(Box::new(SelectSegs {}));
         self.nodes.push(Box::new(Enterpolator {}));
         self.nodes.push(Box::new(DrawDot { size: 10.0 }));
+        self.nodes.push(Box::new(SizeModulator{}));
+
         self
     }
-    pub fn run(&mut self, unit: f32, geom: &Data) -> Vec<Box<RenderItem>>{
+    pub fn run(&mut self, unit: f32, geom: &Data) -> Vec<RenderItem> {
         if geom.groups.len() < 2 {
             return Vec::new();
         }
-        let mut event = Event{
-            groups : vec![(0, unit), (1, unit)],
-            segments : Vec::new(),
-            points : Vec::new(),
+        let mut event = Event {
+            groups: vec![(0, unit), (1, unit)],
+            segments: Vec::new(),
+            points: Vec::new(),
             unit,
             units: Vec::new(),
             items: Vec::new(),
         };
 
+        // println!("unit :{}", unit);
         for node in self.nodes.iter() {
+            // println!("//////////////{:?}//////////////////", node);
             event = node.do_thing(event, geom);
+            // println!("event :{:#?}", event);
         }
         // self.nodes.iter().fold(event, |n, ev| n.do_thing(ev, geom));
         event.items
     }
 }
 
-// #[derive(Debug)]
+#[derive(Debug)]
 pub struct Event {
     groups: Vec<(usize, f32)>,
     segments: Vec<(usize, f32)>,
     points: Vec<(Point, f32)>,
     unit: f32,
     units: Vec<f32>,
-    items: Vec<Box<RenderItem>>,
+    items: Vec<RenderItem>,
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-trait Node {
+// #[derive(Debug)]
+trait Node: Debug {
     fn do_thing(&self, event: Event, geom: &Data) -> Event;
 }
 /*
@@ -125,6 +133,7 @@ struct SomeNode {
 */
 
 /////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
 struct Iterate {
     count: u32,
 }
@@ -139,23 +148,34 @@ impl Node for Iterate {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
 struct SelectSegs {}
 
 impl Node for SelectSegs {
     fn do_thing(&self, mut event: Event, geom: &Data) -> Event {
         let mut seg_list: Vec<(usize, f32)> = Vec::new();
-        event.groups.iter().map(|g| {
-            geom.groups[g.0]
-                .segments
-                .iter()
-                .map(|s| seg_list.push((s.clone(), g.1)));
+        // event.groups.iter().map(|g| {
+        //     geom.groups[g.0]
+        //         .segments
+        //         .iter()
+        //         .map(|s| (s, g.1)).collect()
+        // }).flatten().collect();
+        event.groups.iter().for_each(|g| {
+            if geom.groups[g.0].segments.len() > 0 {
+                geom.groups[g.0]
+                    .segments
+                    .iter()
+                    .for_each(|s| seg_list.push((s.clone(), g.1)));
+            }
         });
+
         event.segments = seg_list;
         event
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
 struct Enterpolator {}
 
 impl Node for Enterpolator {
@@ -164,7 +184,7 @@ impl Node for Enterpolator {
             .segments
             .iter()
             .map(|s| {
-                let seg = &geom.segs[s.0];
+                let seg = &geom.segs[s.0 - 1];
                 // will need to pack angles and stuff also
                 (
                     Point::lerp(&geom.points[seg.point_a], &geom.points[seg.point_b], s.1),
@@ -177,6 +197,7 @@ impl Node for Enterpolator {
 }
 
 //////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
 struct DrawDot {
     size: f32,
     // some sort of keyframes
@@ -187,12 +208,10 @@ impl Node for DrawDot {
         event.items = event
             .points
             .iter()
-            .map(|p| {
-                Box::new(RenderItem::Dot {
-                    pos: p.0.clone(),
-                    size: self.size,
-                    unit: p.1,
-                })
+            .map(|p| RenderItem::Dot {
+                pos: p.0.clone(),
+                size: self.size,
+                unit: p.1,
             })
             .collect();
         event
@@ -200,6 +219,7 @@ impl Node for DrawDot {
 }
 
 //////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
 struct SizeModulator {
     // some sort of keyframes
 }
@@ -208,8 +228,8 @@ impl Node for SizeModulator {
     fn do_thing(&self, mut event: Event, geom: &Data) -> Event {
         event.items.iter().map(|item| {
             match item {
-                // Dot | Square => item.size *= item.unit,
-                // Line => item.weight *= item.unit,
+                RenderItem::Dot { pos, mut size, unit } => size *= unit,
+                // RenderItem::Line => item.weight *= item.unit,
                 _ => (),
             }
         });
