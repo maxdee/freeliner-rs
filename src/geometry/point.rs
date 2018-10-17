@@ -18,7 +18,11 @@ pub struct Point {
 
 impl Default for Point {
     fn default() -> Self {
-        Self{x: 0.0, y: 0.0, z: 0.0}
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 }
 
@@ -56,7 +60,8 @@ impl Point {
 }
 
 impl<'a> AddAssign<&'a Point> for Point {
-    fn add_assign(&mut self, other: &Point) { // why not &Point
+    fn add_assign(&mut self, other: &Point) {
+        // why not &Point
         *self = Point {
             x: self.x + other.x,
             y: self.y + other.y,
@@ -66,7 +71,8 @@ impl<'a> AddAssign<&'a Point> for Point {
 }
 
 impl<'a> MulAssign<&'a Point> for Point {
-    fn mul_assign(&mut self, other: &Point) { // why not &Point
+    fn mul_assign(&mut self, other: &Point) {
+        // why not &Point
         *self = Point {
             x: self.x * other.x,
             y: self.y * other.y,
@@ -84,7 +90,6 @@ impl<'a> MulAssign<&'a Point> for Point {
 //         };
 //     }
 // }
-
 
 fn lerp(a: f32, b: f32, u: f32) -> f32 {
     if a < b {

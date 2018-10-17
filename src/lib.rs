@@ -11,35 +11,41 @@ pub fn get_version() -> &'static str {
 }
 
 // geometry submodule
-pub mod geometry;
-pub mod timer;
-pub mod input;
+pub mod animate;
 pub mod cmd;
+pub mod geometry;
+pub mod input;
 // instance submodule,
 // pub mod instance;
 
-pub use self::geometry::{Data};
-pub use self::timer::Timer;
+pub use self::geometry::Data;
 pub use self::input::Input;
+pub use self::animate::Animator;
 
 pub struct Freeliner {
     pub input: Input,
     pub state: State,
+    pub animator: Animator,
 }
 
 impl Freeliner {
-    pub fn new() -> Self{
-        Freeliner{input: Input::new(), state: State::new()}
+    pub fn new() -> Self {
+        Freeliner {
+            input: Input::new(),
+            state: State::new(),
+            animator: Animator::new(),
+        }
     }
 }
 
 pub struct State {
-    timer : Timer,
     pub geom: geometry::Data,
 }
 
 impl State {
     fn new() -> Self {
-        State {timer: Timer::new(), geom: geometry::Data::new()}
+        State {
+            geom: geometry::Data::new(),
+        }
     }
 }

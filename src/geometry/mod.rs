@@ -16,7 +16,7 @@ pub struct Data {
 impl Data {
     // make new data
     pub fn new() -> Self {
-        Self{
+        Self {
             points: Vec::new(),
             segs: Vec::new(),
             groups: Vec::new(),
@@ -33,7 +33,7 @@ pub struct Segment {
 
 impl Segment {
     pub fn new(point_a: usize, point_b: usize) -> Self {
-        Self{point_a, point_b}
+        Self { point_a, point_b }
     }
 }
 
@@ -45,7 +45,11 @@ pub struct Group {
 }
 
 impl Group {
-    pub fn new(index: usize) -> Self{
-        Self{segments: Vec::new(), index, previous_point: None}
+    pub fn new(index: usize) -> Self {
+        Self {
+            segments: Vec::new(),
+            index,
+            previous_point: None,
+        }
     }
 }
