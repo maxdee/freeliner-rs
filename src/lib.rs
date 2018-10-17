@@ -6,6 +6,10 @@ mod tests {
     }
 }
 
+
+#[macro_use]
+extern crate serde_derive;
+
 pub fn get_version() -> &'static str {
     "0.0000001"
 }
@@ -37,7 +41,7 @@ impl Freeliner {
         }
     }
 }
-
+#[derive(Serialize, Deserialize)]
 pub struct State {
     pub geom: geometry::Data,
 }

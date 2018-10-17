@@ -6,7 +6,7 @@ pub mod segment;
 
 pub const NONE_GROUP: usize = 0;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Data {
     pub points: Vec<Point>,
     pub segs: Vec<Segment>,
@@ -25,7 +25,7 @@ impl Data {
 }
 
 // flat flat
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Segment {
     pub point_a: usize,
     pub point_b: usize,
@@ -37,7 +37,7 @@ impl Segment {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Group {
     pub segments: Vec<usize>,
     pub index: usize,

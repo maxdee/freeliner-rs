@@ -105,10 +105,13 @@ impl Input {
                 self.cmd.exec(state, NewGroup::new());
                 self.selected_group_index = state.geom.groups.len() - 1;
             }
-            key if key == VirtualKeyCode::L as u32 => {
-                // println!("COMMANDS -------------------------------");
-                println!("{:#?}", state.geom);
+            key if key == VirtualKeyCode::O as u32 => {
+                self.cmd.exec(state, LoadState::new(String::from("state.json")));
+                // println!("{:#?}", state.geom);
                 // self.cmd.get_log().iter().map(|cmd| println!("{}", cmd));
+            }
+            key if key == VirtualKeyCode::S as u32 => {
+                self.cmd.exec(state, SaveState::new(String::from("state.json")));
             }
 
             key if key == VirtualKeyCode::Tab as u32 => {

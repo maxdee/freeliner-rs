@@ -1,5 +1,13 @@
+extern crate serde;
+extern crate serde_json;
+
 pub use super::State;
 pub use geometry::*;
+
+use self::serde_json::Error;
+
+use std::fs::File;
+use std::io::prelude::*;
 // in this command pattern, I would need to have indexes or keys to args
 
 pub struct CommandConsumer {
@@ -47,25 +55,66 @@ pub trait Command {
     // to_json??
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////
 
-// struct LoadGeomCmd<'a> {
-// 	filepath: &'a str,
-// 	group: &'a mut SegmentGroup,
-// }
-//
-// impl<'a> LoadGeomCmd<'a> {
-// 	fn new(filepath: &'a str, group: &'a mut SegmentGroup) -> Self{
-// 		Self{ filepath, group}
-// 	}
-// }
-//
-// impl<'a> Command for LoadGeomCmd<'a> {
-// 	fn execute(&mut self) -> Result<(), &str> {
-// 		println!("load file {} into group {}", self.filepath, self.group.index);
-// 		Err("load geom into group not implemented....")
-// 	}
-// }
+/////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
+pub struct SaveState {
+	pub filepath: String,
+}
+
+impl SaveState {
+	pub fn new(filepath: String) -> Self{
+		Self{ filepath }
+	}
+}
+
+impl Command for SaveState {
+	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
+		let j = serde_json::to_vec(state).unwrap();
+		let f = self.filepath.clone();
+		let mut file = File::create(f).unwrap();
+		file.write_all(&j).unwrap();
+        Ok(())
+    }
+
+    fn to_string(&self) -> String {
+        format!(
+            "savestate -f={}",
+            self.filepath,
+        )
+    }
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
+pub struct LoadState {
+	pub filepath: String,
+}
+
+impl LoadState {
+	pub fn new(filepath: String) -> Self{
+		Self{ filepath }
+	}
+}
+
+impl Command for LoadState {
+	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
+		let f = self.filepath.clone();
+		let mut file = File::open(f).unwrap();
+		let mut contents = String::new();
+		file.read_to_string(&mut contents);
+		*state = serde_json::from_str(&contents).unwrap();
+        Ok(())
+    }
+
+    fn to_string(&self) -> String {
+        format!(
+            "savestate -f={}",
+            self.filepath,
+        )
+    }
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]

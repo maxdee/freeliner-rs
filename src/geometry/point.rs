@@ -1,3 +1,4 @@
+
 use std::ops::{AddAssign, MulAssign};
 
 #[test]
@@ -9,7 +10,7 @@ fn test_point_lerp() {
     assert_eq!((0.5, 0.5, 0.5), (x, y, z));
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -58,6 +59,9 @@ impl Point {
         Point::new(lerp(a.x, b.x, u), lerp(a.y, b.y, u), lerp(a.z, b.z, u))
     }
 }
+
+
+
 
 impl<'a> AddAssign<&'a Point> for Point {
     fn add_assign(&mut self, other: &Point) {
