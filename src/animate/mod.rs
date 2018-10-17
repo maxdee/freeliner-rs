@@ -25,7 +25,7 @@ impl Animator {
         }
     }
     pub fn animate(&mut self, geom: &Data) -> Vec<RenderItem> {
-        self.temp += 0.01;
+        self.temp += 0.013;
         self.temp = self.temp.fract();
         self.spawner.run(self.temp, geom)
     }
@@ -76,12 +76,12 @@ impl Spawner {
         self
     }
     pub fn setup_nodes(&mut self) -> &mut Self {
-        self.nodes.push(Box::new(Iterate { count: 4 }));
+        self.nodes.push(Box::new(Iterate { count: 8 }));
+        self.nodes.push(Box::new(GroupPicker {}));
         self.nodes.push(Box::new(SelectSegs {}));
         self.nodes.push(Box::new(Enterpolator {}));
         self.nodes.push(Box::new(DrawDot { size: 10.0 }));
-        self.nodes.push(Box::new(SizeModulator{}));
-
+        self.nodes.push(Box::new(SizeModulator {}));
         self
     }
     pub fn run(&mut self, unit: f32, geom: &Data) -> Vec<RenderItem> {
@@ -143,6 +143,22 @@ impl Node for Iterate {
         let a = event.unit / self.count as f32;
         let i = 1.0 / self.count as f32;
         event.units = (0..self.count).map(|x| x as f32 * i + a).collect();
+        event
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
+struct GroupPicker {}
+
+impl Node for GroupPicker {
+    fn do_thing(&self, mut event: Event, geom: &Data) -> Event {
+        let mut group_list: Vec<(usize, f32)> = Vec::new();
+        event
+            .groups
+            .iter()
+            .for_each(|g| event.units.iter().for_each(|u| group_list.push((g.0, *u))));
+        event.groups = group_list;
         event
     }
 }
@@ -226,13 +242,20 @@ struct SizeModulator {
 
 impl Node for SizeModulator {
     fn do_thing(&self, mut event: Event, geom: &Data) -> Event {
-        event.items.iter().map(|item| {
-            match item {
-                RenderItem::Dot { pos, mut size, unit } => size *= unit,
-                // RenderItem::Line => item.weight *= item.unit,
-                _ => (),
-            }
-        });
+        {
+            // let ev = &mut event;
+            event.items.iter_mut().for_each(|item| {
+                match item {
+                    RenderItem::Dot {
+                        pos,
+                        ref mut size,
+                        ref unit,
+                    } => *size *= if unit < &0.5 {unit*2.0} else {(1.0-unit)*2.0},
+                    // RenderItem::Line => item.weight *= item.unit,
+                    _ => (),
+                }
+            });
+        }
         event
     }
 }
