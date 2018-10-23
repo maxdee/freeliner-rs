@@ -32,12 +32,13 @@ pub struct Freeliner {
     pub animator: Animator,
 }
 
-impl Freeliner {
-    pub fn new() -> Self {
+
+impl Default for Freeliner {
+    fn default() -> Self {
         Freeliner {
             input: Input::new(),
             state: State::new(),
-            animator: Animator::new(),
+            animator: Animator::default(),
         }
     }
 }

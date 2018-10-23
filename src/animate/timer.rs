@@ -5,12 +5,15 @@ pub struct Timer {
     start: Instant,
 }
 
-impl Timer {
-    pub fn new() -> Self {
+impl Default for Timer {
+    fn default() -> Self {
         Timer {
             start: Instant::now(),
         }
     }
+}
+
+impl Timer {
     pub fn get(&self) -> Duration {
         self.start.elapsed()
     }
@@ -19,7 +22,7 @@ impl Timer {
         // + (self.start.elapsed().subsec_nanos() as f64 * 1e-9)
         // (self.start.elapsed().subsec_nanos() as f64 * 1e-9)
         self.start.elapsed().as_secs() * 1000
-            + self.start.elapsed().subsec_nanos() as u64 / 1_000_000
+            + u64::from(self.start.elapsed().subsec_nanos()) / 1_000_000
     }
 
     pub fn tap(&self) {}

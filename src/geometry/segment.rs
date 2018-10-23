@@ -76,7 +76,3 @@ pub struct BezierSegment {
 pub struct NestedSegment {
     // segments: Vec<SegmentType>,
 }
-
-// pub fn scale(seg_type: SegmentTypes){
-//
-// }

@@ -5,7 +5,7 @@ pub use geometry::Point;
 pub struct Input {
     pub cursor_position: Point,
     pub selected_group_index: usize,
-    cursor_line: (Point, Point),
+    pub cursor_line: (Point, Point),
     snap_distance: f32,
     snap_list: Vec<(usize, f32)>,
     cmd: CommandConsumer,
@@ -26,15 +26,15 @@ impl Input {
             cursor_position: Point::default(),
             selected_group_index: 0,
             cursor_line: (Point::default(), Point::default()),
-            snap_distance: 10.0,
+            snap_distance: 20.0,
             snap_list: Vec::new(),
-            cmd: CommandConsumer::new(),
+            cmd: CommandConsumer::default(),
         }
     }
 
     /// Input mouse press event into freeliner.
-    pub fn mouse_pressed(&mut self, state: &mut State, button: usize, pos: Point) {
-        println!("Pressed {} at {:?}", button, pos);
+    pub fn mouse_pressed(&mut self, state: &mut State, button: usize, _pos: Point) {
+        // println!("Pressed {} at {:?}", button, pos);
         let pos = Point::copy(&self.cursor_position);
         match button {
             LEFT_BUTTON => self.handle_left_click(state, pos),
@@ -48,26 +48,38 @@ impl Input {
     fn handle_left_click(&mut self, state: &mut State, pos: Point) {
         let index = self.selected_group_index;
         self.cmd.exec(state, AddPointCmd::new(index, pos));
+        self.update_cursor_line(state);
     }
 
-    fn handle_right_click(&mut self, state: &mut State, pos: Point) {
+    fn update_cursor_line(&mut self, state: &State) {
+        if state.geom.groups.is_empty() {return}
+        if let Some(point) = state.geom.groups[self.selected_group_index].previous_point{
+            self.cursor_line.0.set(&state.geom.points[point]);
+            self.cursor_line.1.set(&self.cursor_position);
+        }
+    }
+
+    fn handle_right_click(&mut self, state: &mut State, _pos: Point) {
         let index = self.selected_group_index;
         self.cmd.exec(state, RemovePoint::new(index));
+        self.update_cursor_line(state);
     }
 
     fn handle_middle_click(&mut self, state: &mut State, pos: Point) {
         let index = self.selected_group_index;
         self.cmd.exec(state, BreakLine::new(index, pos));
+        self.update_cursor_line(state);
     }
 
     pub fn mouse_moved(&mut self, state: &State, pos: Point) {
         self.snapping(state, &pos);
-        if self.snap_list.len() > 0 {
+        if !self.snap_list.is_empty() {
             let i = self.closest_snap();
             self.cursor_position.set(&state.geom.points[i]);
         } else {
             self.cursor_position.set(&pos);
         }
+        self.cursor_line.1.set(&self.cursor_position);
     }
 
     fn closest_snap(&self) -> usize {
@@ -91,7 +103,7 @@ impl Input {
     }
 
     pub fn nudge(&mut self, state: &mut State, mut amount: Point) {
-        if self.snap_list.len() > 0 {
+        if !self.snap_list.is_empty() {
             let i = self.closest_snap();
             amount *= &Point::new_2d(10.0, 10.0);
             self.cursor_position += &amount;
@@ -104,6 +116,7 @@ impl Input {
             key if key == VirtualKeyCode::N as u32 => {
                 self.cmd.exec(state, NewGroup::new());
                 self.selected_group_index = state.geom.groups.len() - 1;
+                self.update_cursor_line(state);
             }
             key if key == VirtualKeyCode::O as u32 => {
                 self.cmd.exec(state, LoadState::new(String::from("state.json")));
@@ -117,6 +130,7 @@ impl Input {
             key if key == VirtualKeyCode::Tab as u32 => {
                 self.selected_group_index += 1;
                 self.selected_group_index %= state.geom.groups.len();
+                self.update_cursor_line(state);
             }
 
             key if key == VirtualKeyCode::Up as u32 => {

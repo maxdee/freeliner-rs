@@ -16,13 +16,15 @@ pub struct CommandConsumer {
     // implement command recording/playing
 }
 
-impl CommandConsumer {
-    pub fn new() -> Self {
+impl Default for CommandConsumer {
+    fn default() -> Self {
         Self {
             command_log: Vec::new(),
         }
     }
+}
 
+impl CommandConsumer {
     // pub fn exec_cmd(&mut self, state: &mut State, mut bx: Box<Command>){
     pub fn exec<T: 'static>(&mut self, state: &mut State, mut cmd: T)
     where
