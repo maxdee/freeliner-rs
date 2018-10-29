@@ -8,7 +8,7 @@ pub struct Input {
     pub cursor_line: (Point, Point),
     snap_distance: f32,
     snap_list: Vec<(usize, f32)>,
-    cmd: CommandConsumer,
+    pub cmd: CommandConsumer,
 }
 
 // use enum instead

@@ -12,7 +12,7 @@ pub use self::timer::Timer;
 
 #[derive(Debug)]
 pub struct Animator {
-    timer: Timer,
+    // timer: Timer,
     spawner: Spawner,
     temp: f32,
 }
@@ -22,7 +22,7 @@ impl Default for Animator {
         let mut spawner = Spawner::default();
         spawner.add_geom(0).add_geom(1).setup_nodes();
         Self {
-            timer: Timer::default(),
+            // timer: Timer::default(),
             spawner,
             temp: 0.0,
         }

@@ -11,7 +11,7 @@ use std::io::prelude::*;
 // in this command pattern, I would need to have indexes or keys to args
 
 pub struct CommandConsumer {
-    command_log: Vec<Box<Command>>,
+    pub log: Vec<Box<Command>>,
     // fn parse_from_osc?
     // implement command recording/playing
 }
@@ -19,7 +19,7 @@ pub struct CommandConsumer {
 impl Default for CommandConsumer {
     fn default() -> Self {
         Self {
-            command_log: Vec::new(),
+            log: Vec::new(),
         }
     }
 }
@@ -35,10 +35,10 @@ impl CommandConsumer {
             println!("CMD Fail : {}", err)
         });
         println!("{}", cmd.to_string());
-        self.command_log.push(Box::new(cmd));
+        self.log.push(Box::new(cmd));
     }
     pub fn get_log(&self) -> Vec<String> {
-        self.command_log.iter().map(|cmd| cmd.to_string()).collect()
+        self.log.iter().map(|cmd| cmd.to_string()).collect()
     }
 }
 
