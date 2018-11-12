@@ -7,6 +7,8 @@ pub use geometry::*;
 use self::serde_json::Error;
 
 use std::fs::File;
+use std::fmt;
+use std::error;
 use std::io::prelude::*;
 // in this command pattern, I would need to have indexes or keys to args
 
@@ -25,7 +27,16 @@ impl Default for CommandConsumer {
 }
 
 impl CommandConsumer {
-    // pub fn exec_cmd(&mut self, state: &mut State, mut bx: Box<Command>){
+    pub fn validate_and_exec<T: 'static, E> (&mut self, state: &mut State, cmd: Result<T, E>)
+        where T:Command,
+              E: std::fmt::Display,
+    {
+        match cmd {
+            Ok(c) => self.exec(state, c),
+            Err(e) => println!("invalid cmd: {}", e),
+        }
+    }
+
     pub fn exec<T: 'static>(&mut self, state: &mut State, mut cmd: T)
     where
         T: Command,
@@ -37,6 +48,7 @@ impl CommandConsumer {
         println!("{}", cmd.to_string());
         self.log.push(Box::new(cmd));
     }
+    
     pub fn get_log(&self) -> Vec<String> {
         self.log.iter().map(|cmd| cmd.to_string()).collect()
     }
@@ -57,7 +69,26 @@ pub trait Command {
     // to_json??
 }
 
+#[derive(Debug)]
+pub struct FileNotFound {
+    file: String,
+}
 
+impl fmt::Display for FileNotFound {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "no such file {}", self.file)
+    }
+}
+
+impl error::Error for FileNotFound {
+    fn description(&self) -> &str {
+        "no such file"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
+    }
+}
 /////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct SaveState {
@@ -68,6 +99,11 @@ impl SaveState {
 	pub fn new(filepath: String) -> Self{
 		Self{ filepath }
 	}
+    pub fn from_string(string: String) -> Result<Self, FileNotFound> {
+        let mut split = string.split(" ");
+        println!("{:?}", split);
+        Err(FileNotFound{file: "ahah.png".to_string()})
+    }
 }
 
 impl Command for SaveState {
@@ -84,6 +120,14 @@ impl Command for SaveState {
             "savestate -f={}",
             self.filepath,
         )
+    }
+}
+
+// not sure about the benefits...
+impl fmt::Display for SaveState {
+    fn fmt(&self, f: &mut fmt::Formatter) ->
+        fmt::Result {
+            write!(f, "savestate -f={}", self.filepath)
     }
 }
 

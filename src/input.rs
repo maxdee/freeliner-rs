@@ -33,7 +33,7 @@ impl Input {
     }
 
     /// Input mouse press event into freeliner.
-    pub fn mouse_pressed(&mut self, state: &mut State, button: usize, _pos: Point) {
+    pub fn mouse_pressed(&mut self, state: &mut State, button: usize) {//, _pos: Point) {
         // println!("Pressed {} at {:?}", button, pos);
         let pos = Point::copy(&self.cursor_position);
         match button {
@@ -114,6 +114,7 @@ impl Input {
     pub fn key_pressed(&mut self, state: &mut State, key: u32) {
         match key {
             key if key == VirtualKeyCode::N as u32 => {
+                // println!("NEW group");
                 self.cmd.exec(state, NewGroup::new());
                 self.selected_group_index = state.geom.groups.len() - 1;
                 self.update_cursor_line(state);
@@ -124,7 +125,9 @@ impl Input {
                 // self.cmd.get_log().iter().map(|cmd| println!("{}", cmd));
             }
             key if key == VirtualKeyCode::S as u32 => {
-                self.cmd.exec(state, SaveState::new(String::from("state.json")));
+                let mut c = SaveState::from_string(String::from("savestate -f=state.json"));
+                self.cmd.validate_and_exec(state, c);
+                // self.cmd.exec(state, SaveState::new(String::from("state.json")));
             }
 
             key if key == VirtualKeyCode::Tab as u32 => {

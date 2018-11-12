@@ -90,8 +90,8 @@ impl Spawner {
         self.nodes.push(Box::new(SelectSegs {}));
         self.nodes.push(Box::new(Enterpolator {}));
         self.nodes.push(Box::new(DrawDot { size: 10.0 }));
-        self.nodes.push(Box::new(SizeModulator {}));
-        // self.nodes.push(Box::new(ExpandContract {}));
+        // self.nodes.push(Box::new(SizeModulator {}));
+        self.nodes.push(Box::new(ExpandContract {}));
         self
     }
     pub fn run(&mut self, unit: f32, geom: &Data) -> Vec<RenderItem> {

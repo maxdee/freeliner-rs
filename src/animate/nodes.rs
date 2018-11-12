@@ -175,7 +175,7 @@ impl Node for ExpandContract {
                         ref mut size,
                         unit,
                         ..
-                    } => if unit < 0.5 {*size = *size * unit * 2.0},
+                    } => if unit < 0.5 {*size *= unit * 2.0},
                     _ => (),
                 }
                 let last = event.items.len()-1;
@@ -184,7 +184,7 @@ impl Node for ExpandContract {
                         ref mut size,
                         unit,
                         ..
-                    } => if unit > 0.5 {*size = *size * (1.0-unit) * 2.0},
+                    } => if unit > 0.5 {*size *= (1.0 - unit) * 2.0},
                     _ => (),
                 }
             }
