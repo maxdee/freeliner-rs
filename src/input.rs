@@ -61,7 +61,7 @@ impl Input {
 
     fn handle_right_click(&mut self, state: &mut State, _pos: Point) {
         let index = self.selected_group_index;
-        self.cmd.exec(state, RemovePoint::new(index));
+        self.cmd.exec(state, RemovePointCmd::new(index));
         self.update_cursor_line(state);
     }
 
@@ -120,22 +120,20 @@ impl Input {
                 self.update_cursor_line(state);
             }
             key if key == VirtualKeyCode::O as u32 => {
-                self.cmd.exec(state, LoadState::new(String::from("state.json")));
+                self.cmd.exec(state, LoadStateCmd::new("state.json".to_string()));
                 // println!("{:#?}", state.geom);
                 // self.cmd.get_log().iter().map(|cmd| println!("{}", cmd));
             }
             key if key == VirtualKeyCode::S as u32 => {
-                let mut c = SaveState::from_string(String::from("savestate -f=state.json"));
-                self.cmd.validate_and_exec(state, c);
-                // self.cmd.exec(state, SaveState::new(String::from("state.json")));
+                // let mut c = SaveStateCmd::from_string(String::from("savestate -f=state.json"));
+                // self.cmd.validate_and_exec(state, c);
+                self.cmd.exec(state, SaveStateCmd::new(String::from("state.json")));
             }
-
             key if key == VirtualKeyCode::Tab as u32 => {
                 self.selected_group_index += 1;
                 self.selected_group_index %= state.geom.groups.len();
                 self.update_cursor_line(state);
             }
-
             key if key == VirtualKeyCode::Up as u32 => {
                 self.nudge(state, Point::new_2d(0.0, 1.0));
             }

@@ -25,10 +25,10 @@ impl Default for CommandConsumer {
         }
     }
 }
-
+// Command consumer validates and executes commands
 impl CommandConsumer {
-    pub fn validate_and_exec<T: 'static, E> (&mut self, state: &mut State, cmd: Result<T, E>)
-        where T:Command,
+    pub fn validate_and_exec<T, E> (&mut self, state: &mut State, cmd: Result<T, E>)
+        where T: Command + 'static,
               E: std::fmt::Display,
     {
         match cmd {
@@ -48,65 +48,89 @@ impl CommandConsumer {
         println!("{}", cmd.to_string());
         self.log.push(Box::new(cmd));
     }
-    
+
     pub fn get_log(&self) -> Vec<String> {
         self.log.iter().map(|cmd| cmd.to_string()).collect()
+    }
+
+}
+
+pub struct CommandFactory;
+
+impl CommandFactory {
+    pub fn string_to_command<T> (string: String) -> Result<T, String>
+        where T: Command,
+    {
+        // let first = string.split_whitespace().next();
+        // match first {
+        //     Some(f) => match f {
+        //         "savestate" => Ok({let mut cmd : Command = SaveStateCmd::from_string(string);cmd}),
+        //         "loadstate" => Ok(LoadStateCmd::from_string(string)),
+        //         "addpoint" => Ok(AddPointCmd::from_string(string)),
+        //         "removepoint" => Ok(RemovePointCmd::from_string(string)),
+        //         "newgroup" => Ok(NewGroup::from_string(string)),
+        //         "nudgepoint" => Ok(NudePointCmd::from_string(string)),
+        //
+        //         _ => Err(format!("unknown command : {}", string)),
+        //     },
+        //     None => println!(" {}", string),
+        // }
+        Err("unknown command".to_string())
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
 pub trait Command {
-    // const NAME: &str;
-    // fn execute<T>(&self, args: T) -> Result<(), &str> where T: GenericData;
-    // fn execute<T>(&self, args: T) -> Result<(), &str>;
+    fn from_string(args: String) -> Self where Self: Sized;
     fn execute(&mut self, state: &mut State) -> Result<(), &str>;
-    // fn get_name(&self) -> &'static str;
-    // fn from_string<T>(args: String) -> Self
-
-    // use display instead
     fn to_string(&self) -> String;
     // to_json??
 }
 
-#[derive(Debug)]
-pub struct FileNotFound {
-    file: String,
-}
-
-impl fmt::Display for FileNotFound {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "no such file {}", self.file)
-    }
-}
-
-impl error::Error for FileNotFound {
-    fn description(&self) -> &str {
-        "no such file"
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        None
-    }
-}
+// #[derive(Debug)]
+// pub struct FileNotFound {
+//     file: String,
+// }
+//
+// impl fmt::Display for FileNotFound {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         write!(f, "no such file {}", self.file)
+//     }
+// }
+//
+// impl error::Error for FileNotFound {
+//     fn description(&self) -> &str {
+//         "no such file"
+//     }
+//
+//     fn cause(&self) -> Option<&error::Error> {
+//         None
+//     }
+// }
 /////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
-pub struct SaveState {
+pub struct SaveStateCmd {
 	pub filepath: String,
 }
 
-impl SaveState {
+impl SaveStateCmd {
 	pub fn new(filepath: String) -> Self{
 		Self{ filepath }
 	}
-    pub fn from_string(string: String) -> Result<Self, FileNotFound> {
-        let mut split = string.split(" ");
-        println!("{:?}", split);
-        Err(FileNotFound{file: "ahah.png".to_string()})
-    }
 }
 
-impl Command for SaveState {
+impl Command for SaveStateCmd {
+
+    // if supplied a filename or use default
+    fn from_string(args: String) -> Self {
+        let mut split = args.split(" ");
+        match split.nth(1) {
+            Some(filepath) => Self::new(filepath.to_string()),
+            _ => Self::new("default.json".to_string()),
+        }
+    }
+
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
 		let j = serde_json::to_vec(state).unwrap();
 		let f = self.filepath.clone();
@@ -124,27 +148,35 @@ impl Command for SaveState {
 }
 
 // not sure about the benefits...
-impl fmt::Display for SaveState {
+impl fmt::Display for SaveStateCmd {
     fn fmt(&self, f: &mut fmt::Formatter) ->
         fmt::Result {
             write!(f, "savestate -f={}", self.filepath)
     }
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
-pub struct LoadState {
+pub struct LoadStateCmd {
 	pub filepath: String,
 }
 
-impl LoadState {
+impl LoadStateCmd {
 	pub fn new(filepath: String) -> Self{
 		Self{ filepath }
 	}
 }
 
-impl Command for LoadState {
+impl Command for LoadStateCmd {
+    // if supplied a filename or use default
+    fn from_string(args: String) -> Self {
+        let mut split = args.split(" ");
+        match split.nth(1) {
+            Some(filepath) => Self::new(filepath.to_string()),
+            _ => Self::new("default.json".to_string()),
+        }
+    }
+
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
 		let f = self.filepath.clone();
 		let mut file = File::open(f).unwrap();
@@ -166,38 +198,35 @@ impl Command for LoadState {
 #[derive(Debug)]
 pub struct AddPointCmd {
     // pub group: &mut SegmentGroup,
-    pub index: usize,
+    pub index: Option<usize>,
+    pub group: usize,
     pub new_point: Point,
 }
 
 impl AddPointCmd {
-    pub fn new(index: usize, new_point: Point) -> Self {
-        Self { index, new_point }
-    }
-}
-
-// access data
-pub fn get_group(state: &mut State, index: usize) -> Result<&mut Group, &str> {
-    if index < state.geom.groups.len() {
-        Ok(&mut state.geom.groups[index])
-    } else {
-        Err("no such group")
+    pub fn new(group: usize, new_point: Point) -> Self {
+        Self { index: None, group, new_point }
     }
 }
 
 impl Command for AddPointCmd {
+    // addpoint -g=3 -xy=20,30
+    fn from_string(args: String) -> Self {
+        Self::new(0, Point::default())
+    }
     // const NAME: &str = "addpoint";
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         // let group = get_group(state, self.index)?;
         // do this better
-        if self.index >= state.geom.groups.len() {
+        if self.group >= state.geom.groups.len() {
             return Err("no such group"); //format!("no such group {}", self.to_string()));
         }
 
-        let group = &mut state.geom.groups[self.index];
+        let group = &mut state.geom.groups[self.group];
         state.geom.points.push(Point::copy(&self.new_point));
 
         let new_index = state.geom.points.len() - 1;
+        self.index = Some(new_index);
 
         if group.previous_point.is_some() {
             // push the new point, but if is snapped, then dont...
@@ -220,30 +249,33 @@ impl Command for AddPointCmd {
     fn to_string(&self) -> String {
         format!(
             "addpoint -g={} -xy={},{}",
-            self.index, self.new_point.x, self.new_point.y
+            self.group, self.new_point.x, self.new_point.y
         )
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
-pub struct RemovePoint {
+pub struct RemovePointCmd {
     // pub group: &mut SegmentGroup,
-    pub index: usize,
+    pub group: usize,
 }
 
-impl RemovePoint {
-    pub fn new(index: usize) -> Self {
-        Self { index }
+impl RemovePointCmd {
+    pub fn new(group: usize) -> Self {
+        Self { group }
     }
 }
 
-impl Command for RemovePoint {
+impl Command for RemovePointCmd {
+    fn from_string(args: String) -> Self {
+        Self::new(0)
+    }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         let group = state
             .geom
             .groups
-            .get_mut(self.index)
+            .get_mut(self.group)
             .ok_or("no such group")?;
 
         if group.segments.len() > 0 {
@@ -264,7 +296,7 @@ impl Command for RemovePoint {
     // 	"removepoint"
     // }
     fn to_string(&self) -> String {
-        format!("removepoint -g={}", self.index)
+        format!("removepoint -g={}", self.group)
     }
 }
 
@@ -272,19 +304,22 @@ impl Command for RemovePoint {
 #[derive(Debug)]
 pub struct BreakLine {
     // pub group: &mut SegmentGroup,
-    pub index: usize,
+    pub group: usize,
     pub new_point: Point,
 }
 
 impl BreakLine {
-    pub fn new(index: usize, new_point: Point) -> Self {
-        Self { index, new_point }
+    pub fn new(group: usize, new_point: Point) -> Self {
+        Self { group, new_point }
     }
 }
 
 impl Command for BreakLine {
+    fn from_string(args: String) -> Self {
+        Self::new(0, Point::default())
+    }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
-        let group = &mut state.geom.groups[self.index];
+        let group = &mut state.geom.groups[self.group];
         state.geom.points.push(Point::copy(&self.new_point));
         let new_index = state.geom.points.len() - 1;
         group.previous_point = Some(new_index);
@@ -296,7 +331,7 @@ impl Command for BreakLine {
     fn to_string(&self) -> String {
         format!(
             "breakline -g={} -xy={},{}",
-            self.index, self.new_point.x, self.new_point.y
+            self.group, self.new_point.x, self.new_point.y
         )
     }
 }
@@ -312,6 +347,9 @@ impl NewGroup {
 }
 
 impl Command for NewGroup {
+    fn from_string(args: String) -> Self {
+        Self::new()
+    }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         let i = state.geom.groups.len();
         state.geom.groups.push(Group::new(i));
@@ -329,20 +367,23 @@ impl Command for NewGroup {
 #[derive(Debug)]
 pub struct NudgePoint {
     // pub group: &mut SegmentGroup,
-    pub index: usize,
+    pub point: usize,
     pub nudge: Point,
 }
 
 impl NudgePoint {
-    pub fn new(index: usize, nudge: Point) -> Self {
-        Self { index, nudge }
+    pub fn new(point: usize, nudge: Point) -> Self {
+        Self { point, nudge }
     }
 }
 
 impl Command for NudgePoint {
+    fn from_string(args: String) -> Self {
+        Self::new(0, Point::default())
+    }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         // let mut point = &mut
-        let i = self.index;
+        let i = self.point;
         state.geom.points[i] += &self.nudge;
         // point += self.nudge;
         Ok(())
@@ -353,7 +394,7 @@ impl Command for NudgePoint {
     fn to_string(&self) -> String {
         format!(
             "nudge -p={} -xy={},{}",
-            self.index, self.nudge.x, self.nudge.y
+            self.point, self.nudge.x, self.nudge.y
         )
     }
 }
