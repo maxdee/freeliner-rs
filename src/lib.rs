@@ -6,7 +6,6 @@ mod tests {
     }
 }
 
-
 #[macro_use]
 extern crate serde_derive;
 
@@ -31,7 +30,6 @@ pub struct Freeliner {
     pub state: State,
     pub animator: Animator,
 }
-
 
 impl Default for Freeliner {
     fn default() -> Self {

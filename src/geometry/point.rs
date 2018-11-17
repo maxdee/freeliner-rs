@@ -1,4 +1,3 @@
-
 use std::ops::{AddAssign, MulAssign};
 
 #[test]
@@ -59,9 +58,6 @@ impl Point {
         Point::new(lerp(a.x, b.x, u), lerp(a.y, b.y, u), lerp(a.z, b.z, u))
     }
 }
-
-
-
 
 impl<'a> AddAssign<&'a Point> for Point {
     fn add_assign(&mut self, other: &Point) {

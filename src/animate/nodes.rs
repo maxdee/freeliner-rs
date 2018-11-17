@@ -1,6 +1,6 @@
-use std::fmt::Debug;
-use super::{RenderItem, Event};
 use super::super::geometry::*;
+use super::{Event, RenderItem};
+use std::fmt::Debug;
 
 /////////////////////////////////////////////////////////////////////////////////////
 // #[derive(Debug)]
@@ -126,7 +126,11 @@ pub struct SizeModulator {
 
 impl SizeModulator {
     fn modulate(&self, size: f32, unit: f32) -> f32 {
-        size * if unit < 0.5 {unit*2.0} else {(1.0-unit)*2.0}
+        size * if unit < 0.5 {
+            unit * 2.0
+        } else {
+            (1.0 - unit) * 2.0
+        }
     }
 }
 
@@ -134,20 +138,16 @@ impl Node for SizeModulator {
     fn do_thing(&self, mut event: Event, _geom: &Data) -> Event {
         {
             // let ev = &mut event;
-            event.items.iter_mut().for_each(|item| {
-                match item {
-                    RenderItem::Dot {
-                        ref mut size,
-                        unit,
-                        ..
-                    } => *size = self.modulate(*size, *unit),
-                    RenderItem::Line {
-                        ref mut weight,
-                        unit,
-                        ..
-                    } => *weight = self.modulate(*weight, *unit),
-                    _ => (),
-                }
+            event.items.iter_mut().for_each(|item| match item {
+                RenderItem::Dot {
+                    ref mut size, unit, ..
+                } => *size = self.modulate(*size, *unit),
+                RenderItem::Line {
+                    ref mut weight,
+                    unit,
+                    ..
+                } => *weight = self.modulate(*weight, *unit),
+                _ => (),
             });
         }
         event
@@ -172,19 +172,23 @@ impl Node for ExpandContract {
             if !event.items.is_empty() {
                 match event.items[0] {
                     RenderItem::Dot {
-                        ref mut size,
-                        unit,
-                        ..
-                    } => if unit < 0.5 {*size *= unit * 2.0},
+                        ref mut size, unit, ..
+                    } => {
+                        if unit < 0.5 {
+                            *size *= unit * 2.0
+                        }
+                    }
                     _ => (),
                 }
-                let last = event.items.len()-1;
+                let last = event.items.len() - 1;
                 match event.items[last] {
                     RenderItem::Dot {
-                        ref mut size,
-                        unit,
-                        ..
-                    } => if unit > 0.5 {*size *= (1.0 - unit) * 2.0},
+                        ref mut size, unit, ..
+                    } => {
+                        if unit > 0.5 {
+                            *size *= (1.0 - unit) * 2.0
+                        }
+                    }
                     _ => (),
                 }
             }

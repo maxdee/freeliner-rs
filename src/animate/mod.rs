@@ -1,10 +1,9 @@
 use super::geometry::*;
 use std::fmt::Debug;
-pub mod timer;
 pub mod nodes;
+pub mod timer;
 pub use self::nodes::*;
 pub use self::timer::Timer;
-
 
 // pub trait RenderItem {
 //     // fn to_string(&self) -> String;
