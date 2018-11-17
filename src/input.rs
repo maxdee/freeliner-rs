@@ -8,7 +8,8 @@ pub struct Input {
     pub cursor_line: (Point, Point),
     snap_distance: f32,
     snap_list: Vec<(usize, f32)>,
-    pub cmd: CommandConsumer,
+    consumer: CommandConsumer,
+    cmd_factory: CommandFactory,
 }
 
 // use enum instead
@@ -28,9 +29,22 @@ impl Input {
             cursor_line: (Point::default(), Point::default()),
             snap_distance: 20.0,
             snap_list: Vec::new(),
-            cmd: CommandConsumer::default(),
+            consumer: CommandConsumer::default(),
+            cmd_factory: CommandFactory::default().populate(),
         }
     }
+
+    // receive string and maybe execute them
+    // not sure about stati
+
+    pub fn string_command(&mut self, state: &mut State, string: String){
+        let mut res = self.cmd_factory.string_to_command(string);
+        match res {
+            Ok(c) => self.consumer.exec(state, c),
+            Err(e) => println!("{:?}",e),
+        }
+    }
+
 
     /// Input mouse press event into freeliner.
     pub fn mouse_pressed(&mut self, state: &mut State, button: usize) {//, _pos: Point) {
@@ -47,7 +61,7 @@ impl Input {
 
     fn handle_left_click(&mut self, state: &mut State, pos: Point) {
         let index = self.selected_group_index;
-        self.cmd.exec(state, AddPointCmd::new(index, pos));
+        self.consumer.exec(state, Box::new(AddPointCmd::new(index, pos)));
         self.update_cursor_line(state);
     }
 
@@ -61,13 +75,13 @@ impl Input {
 
     fn handle_right_click(&mut self, state: &mut State, _pos: Point) {
         let index = self.selected_group_index;
-        self.cmd.exec(state, RemovePointCmd::new(index));
+        self.consumer.exec(state, Box::new(RemovePointCmd::new(index)));
         self.update_cursor_line(state);
     }
 
     fn handle_middle_click(&mut self, state: &mut State, pos: Point) {
         let index = self.selected_group_index;
-        self.cmd.exec(state, BreakLine::new(index, pos));
+        self.consumer.exec(state, Box::new(BreakLineCmd::new(index, pos)));
         self.update_cursor_line(state);
     }
 
@@ -107,7 +121,7 @@ impl Input {
             let i = self.closest_snap();
             amount *= &Point::new_2d(10.0, 10.0);
             self.cursor_position += &amount;
-            self.cmd.exec(state, NudgePoint::new(i, amount));
+            self.consumer.exec(state, Box::new(NudgePointCmd::new(i, amount)));
         }
     }
 
@@ -115,19 +129,19 @@ impl Input {
         match key {
             key if key == VirtualKeyCode::N as u32 => {
                 // println!("NEW group");
-                self.cmd.exec(state, NewGroup::new());
+                self.consumer.exec(state, Box::new(NewGroupCmd::new()));
                 self.selected_group_index = state.geom.groups.len() - 1;
                 self.update_cursor_line(state);
             }
             key if key == VirtualKeyCode::O as u32 => {
-                self.cmd.exec(state, LoadStateCmd::new("state.json".to_string()));
+                self.consumer.exec(state, Box::new(LoadStateCmd::new("state.json".to_string())));
                 // println!("{:#?}", state.geom);
                 // self.cmd.get_log().iter().map(|cmd| println!("{}", cmd));
             }
             key if key == VirtualKeyCode::S as u32 => {
                 // let mut c = SaveStateCmd::from_string(String::from("savestate -f=state.json"));
                 // self.cmd.validate_and_exec(state, c);
-                self.cmd.exec(state, SaveStateCmd::new(String::from("state.json")));
+                self.consumer.exec(state, Box::new(SaveStateCmd::new(String::from("state.json"))));
             }
             key if key == VirtualKeyCode::Tab as u32 => {
                 self.selected_group_index += 1;

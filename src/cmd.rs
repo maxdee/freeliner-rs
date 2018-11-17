@@ -27,9 +27,8 @@ impl Default for CommandConsumer {
 }
 // Command consumer validates and executes commands
 impl CommandConsumer {
-    pub fn validate_and_exec<T, E> (&mut self, state: &mut State, cmd: Result<T, E>)
-        where T: Command + 'static,
-              E: std::fmt::Display,
+
+    pub fn validate_and_exec (&mut self, state: &mut State, cmd: Result<Box<Command>, CmdError>)
     {
         match cmd {
             Ok(c) => self.exec(state, c),
@@ -37,16 +36,16 @@ impl CommandConsumer {
         }
     }
 
-    pub fn exec<T: 'static>(&mut self, state: &mut State, mut cmd: T)
-    where
-        T: Command,
+    pub fn exec(&mut self, state: &mut State, mut cmd: Box<Command>)
+    // where
+    //     T: Command,
     {
         cmd.execute(state).unwrap_or_else(|err| {
             // eprintln!("CMD Fail : {}", err)
             println!("CMD Fail : {}", err)
         });
         println!("{}", cmd.to_string());
-        self.log.push(Box::new(cmd));
+        self.log.push(cmd);
     }
 
     pub fn get_log(&self) -> Vec<String> {
@@ -55,63 +54,87 @@ impl CommandConsumer {
 
 }
 
-pub struct CommandFactory;
+pub struct CommandFactory {
+    pub command_list: Vec<Box<Command>>,
+}
+
+impl Default for CommandFactory {
+    fn default() -> Self {
+        let list = Vec::new();
+        Self {
+            command_list: list,
+        }
+    }
+}
 
 impl CommandFactory {
-    pub fn string_to_command<T> (string: String) -> Result<T, String>
-        where T: Command,
+
+    pub fn populate(mut self) -> Self {
+        self.command_list.push(Box::new(SaveStateCmd::default()));
+        self.command_list.push(Box::new(LoadStateCmd::default()));
+        self.command_list.push(Box::new(AddPointCmd::default()));
+        self.command_list.push(Box::new(RemovePointCmd::default()));
+        self.command_list.push(Box::new(BreakLineCmd::default()));
+        self.command_list.push(Box::new(NewGroupCmd::default()));
+        self.command_list.push(Box::new(NudgePointCmd::default()));
+        self
+    }
+    pub fn string_to_command (&self, string: String) -> Result<Box<Command>, CmdError>
+        // where T: Command + Sized,
     {
-        // let first = string.split_whitespace().next();
-        // match first {
-        //     Some(f) => match f {
-        //         "savestate" => Ok({let mut cmd : Command = SaveStateCmd::from_string(string);cmd}),
-        //         "loadstate" => Ok(LoadStateCmd::from_string(string)),
-        //         "addpoint" => Ok(AddPointCmd::from_string(string)),
-        //         "removepoint" => Ok(RemovePointCmd::from_string(string)),
-        //         "newgroup" => Ok(NewGroup::from_string(string)),
-        //         "nudgepoint" => Ok(NudePointCmd::from_string(string)),
-        //
+        Err(CmdError::NoMatch)
+
+        // if let Some(first) = string.split_whitespace().next() {
+        //     match first {
+        //         "savestate" => Ok(T::from_string(string)),
+        //         // "loadstate" => Ok(LoadStateCmd::from_string(string)),
+        //         // "addpoint" => Ok(AddPointCmd::from_string(string)),
+        //         // "removepoint" => Ok(RemovePointCmd::from_string(string)),
+        //         // "newgroup" => Ok(NewGroup::from_string(string)),
+        //         // "nudgepoint" => Ok(NudePointCmd::from_string(string)),
         //         _ => Err(format!("unknown command : {}", string)),
-        //     },
-        //     None => println!(" {}", string),
+        //     }
+        // } else {
+        //     Err("unknown command".to_string())
         // }
-        Err("unknown command".to_string())
+
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-
 pub trait Command {
-    fn from_string(args: String) -> Self where Self: Sized;
+    fn from_string(args: String) -> Result<Self, CmdError> where Self: Sized;
     fn execute(&mut self, state: &mut State) -> Result<(), &str>;
     fn to_string(&self) -> String;
+    fn get_keyword() -> &'static str where Self: Sized;
     // to_json??
 }
 
-// #[derive(Debug)]
-// pub struct FileNotFound {
-//     file: String,
-// }
-//
-// impl fmt::Display for FileNotFound {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         write!(f, "no such file {}", self.file)
-//     }
-// }
-//
-// impl error::Error for FileNotFound {
-//     fn description(&self) -> &str {
-//         "no such file"
-//     }
-//
-//     fn cause(&self) -> Option<&error::Error> {
-//         None
-//     }
-// }
-/////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
+pub enum CmdError {
+    NoMatch,
+    Malformed,
+    NoCommand(&'static str),
+    NotImplemented(&'static str),
+    FileError()
+}
+
+impl fmt::Display for CmdError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            CmdError::NoMatch => f.write_str("not a match"),
+            CmdError::NoCommand(ref string) => f.write_str(string),
+            CmdError::NotImplemented(ref string) => f.write_str(string),
+            _ => f.write_str("unknown error :("),
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default)]
 pub struct SaveStateCmd {
 	pub filepath: String,
+    // keyword: &'static str,
 }
 
 impl SaveStateCmd {
@@ -121,13 +144,21 @@ impl SaveStateCmd {
 }
 
 impl Command for SaveStateCmd {
-
+    fn get_keyword() -> &'static str {
+        "savestate"
+    }
+    // static KEYWORD: &'static str = "savestate";
+    // const KEYWORD: &str = "savestate";
     // if supplied a filename or use default
-    fn from_string(args: String) -> Self {
-        let mut split = args.split(" ");
-        match split.nth(1) {
-            Some(filepath) => Self::new(filepath.to_string()),
-            _ => Self::new("default.json".to_string()),
+    fn from_string(args: String) -> Result<Self, CmdError> {
+        if args.contains(Self::get_keyword()) {
+            match args.split_whitespace().nth(1) {
+                Some(filepath) => Ok(Self::new(filepath.to_string())),
+                _ => Ok(Self::new("default.json".to_string())),
+            }
+        }
+        else {
+            Err(CmdError::NoMatch)
         }
     }
 
@@ -141,22 +172,22 @@ impl Command for SaveStateCmd {
 
     fn to_string(&self) -> String {
         format!(
-            "savestate -f={}",
+            "savestate {}",
             self.filepath,
         )
     }
 }
 
 // not sure about the benefits...
-impl fmt::Display for SaveStateCmd {
-    fn fmt(&self, f: &mut fmt::Formatter) ->
-        fmt::Result {
-            write!(f, "savestate -f={}", self.filepath)
-    }
-}
+// impl fmt::Display for SaveStateCmd {
+//     fn fmt(&self, f: &mut fmt::Formatter) ->
+//         fmt::Result {
+//             write!(f, "{}", self.to_string())
+//     }
+// }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct LoadStateCmd {
 	pub filepath: String,
 }
@@ -168,13 +199,22 @@ impl LoadStateCmd {
 }
 
 impl Command for LoadStateCmd {
+    fn get_keyword() -> &'static str {
+        "loadstate"
+    }
     // if supplied a filename or use default
-    fn from_string(args: String) -> Self {
-        let mut split = args.split(" ");
-        match split.nth(1) {
-            Some(filepath) => Self::new(filepath.to_string()),
-            _ => Self::new("default.json".to_string()),
+    fn from_string(args: String) -> Result<Self, CmdError> {
+        if args.contains(Self::get_keyword()) {
+            let mut split = args.split(" ");
+            match split.nth(1) {
+                Some(filepath) => Ok(Self::new(filepath.to_string())),
+                _ => Ok(Self::new("default.json".to_string())),
+            }
         }
+        else {
+            Err(CmdError::NoMatch)
+        }
+
     }
 
 	fn execute(&mut self, state: &mut State) -> Result<(), &str> {
@@ -195,7 +235,7 @@ impl Command for LoadStateCmd {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AddPointCmd {
     // pub group: &mut SegmentGroup,
     pub index: Option<usize>,
@@ -204,15 +244,25 @@ pub struct AddPointCmd {
 }
 
 impl AddPointCmd {
+
     pub fn new(group: usize, new_point: Point) -> Self {
         Self { index: None, group, new_point }
     }
 }
 
 impl Command for AddPointCmd {
+    fn get_keyword() -> &'static str {
+        "addpoint"
+    }
     // addpoint -g=3 -xy=20,30
-    fn from_string(args: String) -> Self {
-        Self::new(0, Point::default())
+    fn from_string(args: String) -> Result<Self, CmdError> {
+        if args.contains(Self::get_keyword()) {
+            Ok(Self::new(0, Point::default()))
+            // can just do let x: f32 = arg.parse(); and check for error
+        }
+        else {
+            Err(CmdError::NoMatch)
+        }
     }
     // const NAME: &str = "addpoint";
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
@@ -255,7 +305,7 @@ impl Command for AddPointCmd {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RemovePointCmd {
     // pub group: &mut SegmentGroup,
     pub group: usize,
@@ -268,8 +318,16 @@ impl RemovePointCmd {
 }
 
 impl Command for RemovePointCmd {
-    fn from_string(args: String) -> Self {
-        Self::new(0)
+    fn get_keyword() -> &'static str {
+        "removepoint"
+    }
+    fn from_string(args: String) -> Result<Self, CmdError> {
+        if args.contains(Self::get_keyword()) {
+            Ok(Self::new(0))
+        }
+        else {
+            Err(CmdError::NoMatch)
+        }
     }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         let group = state
@@ -301,22 +359,30 @@ impl Command for RemovePointCmd {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug)]
-pub struct BreakLine {
+#[derive(Debug, Default)]
+pub struct BreakLineCmd {
     // pub group: &mut SegmentGroup,
     pub group: usize,
     pub new_point: Point,
 }
 
-impl BreakLine {
+impl BreakLineCmd {
     pub fn new(group: usize, new_point: Point) -> Self {
         Self { group, new_point }
     }
 }
 
-impl Command for BreakLine {
-    fn from_string(args: String) -> Self {
-        Self::new(0, Point::default())
+impl Command for BreakLineCmd {
+    fn get_keyword() -> &'static str {
+        "breakline"
+    }
+    fn from_string(args: String) -> Result<Self, CmdError> {
+        if args.contains(Self::get_keyword()) {
+            Ok(Self::new(0, Point::default()))
+        }
+        else {
+            Err(CmdError::NoMatch)
+        }
     }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         let group = &mut state.geom.groups[self.group];
@@ -337,18 +403,26 @@ impl Command for BreakLine {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug)]
-pub struct NewGroup {}
+#[derive(Debug, Default)]
+pub struct NewGroupCmd {}
 
-impl NewGroup {
+impl NewGroupCmd {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl Command for NewGroup {
-    fn from_string(args: String) -> Self {
-        Self::new()
+impl Command for NewGroupCmd {
+    fn get_keyword() -> &'static str {
+        "newgroup"
+    }
+    fn from_string(args: String) -> Result<Self, CmdError> {
+        if args.contains(Self::get_keyword()) {
+            Ok(Self::new())
+        }
+        else {
+            Err(CmdError::NoMatch)
+        }
     }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         let i = state.geom.groups.len();
@@ -364,22 +438,30 @@ impl Command for NewGroup {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug)]
-pub struct NudgePoint {
+#[derive(Debug, Default)]
+pub struct NudgePointCmd {
     // pub group: &mut SegmentGroup,
     pub point: usize,
     pub nudge: Point,
 }
 
-impl NudgePoint {
+impl NudgePointCmd {
     pub fn new(point: usize, nudge: Point) -> Self {
         Self { point, nudge }
     }
 }
 
-impl Command for NudgePoint {
-    fn from_string(args: String) -> Self {
-        Self::new(0, Point::default())
+impl Command for NudgePointCmd {
+    fn get_keyword() -> &'static str {
+        "nudgepoint"
+    }
+    fn from_string(args: String) -> Result<Self, CmdError> {
+        if args.contains(Self::get_keyword()) {
+            Ok(Self::new(0, Point::default()))
+        }
+        else {
+            Err(CmdError::NoMatch)
+        }
     }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         // let mut point = &mut
