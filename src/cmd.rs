@@ -10,11 +10,33 @@ use std::error;
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
-// in this command pattern, I would need to have indexes or keys to args
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+pub enum CmdError {
+    NoMatch,
+    Malformed,
+    NoCommand(&'static str),
+    NotImplemented(&'static str),
+    FileError(),
+}
+
+impl fmt::Display for CmdError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            CmdError::NoMatch => f.write_str("not a match"),
+            CmdError::NoCommand(ref string) => f.write_str(string),
+            CmdError::NotImplemented(ref string) => f.write_str(string),
+            _ => f.write_str("unknown error :("),
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct CommandConsumer {
     pub log: Vec<Box<Command>>,
-    // fn parse_from_osc?
     // implement command recording/playing
 }
 
@@ -97,10 +119,10 @@ impl CommandFactory {
         match string.split_whitespace().next() {
             SaveStateCmd::get_keyword() => Ok(Box::new(SaveStateCmd::from_string(string))),
             LoadStateCmd::get_keyword() => Ok(Box::new(LoadStateCmd::from_string(string))),
-            AddPointCmd::get_keyword() =>Ok(Box::new( AddPointCmd::from_string(string))),
+            AddPointCmd::get_keyword() => Ok(Box::new( AddPointCmd::from_string(string))),
             RemovePointCmd::get_keyword() => Ok(Box::new(RemovePointCmd::from_string(string))),
             BreakLineCmd::get_keyword() => Ok(Box::new(BreakLineCmd::from_string(string))),
-            NewGroupCmd::get_keyword() =>Ok(Box::new( NewGroupCmd::from_string(string))),
+            NewGroupCmd::get_keyword() => Ok(Box::new( NewGroupCmd::from_string(string))),
             NudgePointCmd::get_keyword() => Ok(Box::new(NudgePointCmd::from_string(string))),
             _ => Err(CmdError::NoMatch),
         }
@@ -108,34 +130,12 @@ impl CommandFactory {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
+
 pub trait Command {
     fn from_string(args: String) -> Result<Box<Self>, CmdError>;
-    fn get_keyword() -> &'static str;
     fn execute(&mut self, state: &mut State) -> Result<(), &str>;
     fn to_string(&self) -> String;
-    // where
-    //     Self: Sized;
-    // to_json??
-}
-
-#[derive(Debug)]
-pub enum CmdError {
-    NoMatch,
-    Malformed,
-    NoCommand(&'static str),
-    NotImplemented(&'static str),
-    FileError(),
-}
-
-impl fmt::Display for CmdError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            CmdError::NoMatch => f.write_str("not a match"),
-            CmdError::NoCommand(ref string) => f.write_str(string),
-            CmdError::NotImplemented(ref string) => f.write_str(string),
-            _ => f.write_str("unknown error :("),
-        }
-    }
+    fn get_keyword(&self) -> &'static str;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -152,7 +152,7 @@ impl SaveStateCmd {
 }
 
 impl Command for SaveStateCmd {
-    fn get_keyword() -> &'static str {
+    fn get_keyword(&self) -> &'static str {
         "savestate"
     }
     // static KEYWORD: &'static str = "savestate";
@@ -203,7 +203,7 @@ impl LoadStateCmd {
 }
 
 impl Command for LoadStateCmd {
-    fn get_keyword() -> &'static str {
+    fn get_keyword(&self) -> &'static str {
         "loadstate"
     }
     // if supplied a filename or use default
@@ -253,7 +253,7 @@ impl AddPointCmd {
 }
 
 impl Command for AddPointCmd {
-    fn get_keyword() -> &'static str {
+    fn get_keyword(&self) -> &'static str {
         "addpoint"
     }
     // addpoint -g=3 -xy=20,30
@@ -319,7 +319,7 @@ impl RemovePointCmd {
 }
 
 impl Command for RemovePointCmd {
-    fn get_keyword() -> &'static str {
+    fn get_keyword(&self) -> &'static str {
         "removepoint"
     }
     fn from_string(args: String) -> Result<Box<Self>, CmdError> {
@@ -373,7 +373,7 @@ impl BreakLineCmd {
 }
 
 impl Command for BreakLineCmd {
-    fn get_keyword() -> &'static str {
+    fn get_keyword(&self) -> &'static str {
         "breakline"
     }
     fn from_string(args: String) -> Result<Box<Self>, CmdError> {
@@ -412,7 +412,7 @@ impl NewGroupCmd {
 }
 
 impl Command for NewGroupCmd {
-    fn get_keyword() -> &'static str {
+    fn get_keyword(&self) -> &'static str {
         "newgroup"
     }
     fn from_string(args: String) -> Result<Box<Self>, CmdError> {
@@ -450,7 +450,7 @@ impl NudgePointCmd {
 }
 
 impl Command for NudgePointCmd {
-    fn get_keyword() -> &'static str {
+    fn get_keyword(&self) -> &'static str {
         "nudgepoint"
     }
     fn from_string(args: String) -> Result<Box<Self>, CmdError> {
