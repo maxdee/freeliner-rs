@@ -41,7 +41,7 @@ impl Input {
         let mut res = self.cmd_factory.string_to_command(string);
         match res {
             Ok(c) => self.consumer.exec(state, c),
-            Err(e) => println!("{:?}", e),
+            Err(e) => println!("error parsing command : {:?}", e),
         }
     }
 
@@ -157,6 +157,9 @@ impl Input {
                 self.selected_group_index += 1;
                 self.selected_group_index %= state.geom.groups.len();
                 self.update_cursor_line(state);
+            }
+            key if key == VirtualKeyCode::Return as u32 => {
+                self.string_command(state, "removepoint 2".to_string());
             }
             key if key == VirtualKeyCode::Up as u32 => {
                 self.nudge(state, Point::new_2d(0.0, 1.0));

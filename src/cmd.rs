@@ -10,23 +10,25 @@ use std::error;
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
+use std::collections::HashMap;
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
 pub enum CmdError {
     NoMatch,
-    Malformed,
-    NoCommand(&'static str),
+    Malformed(String),
+    NoCommand(String),
     NotImplemented(&'static str),
     FileError(),
+    NoFile,
 }
 
 impl fmt::Display for CmdError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             CmdError::NoMatch => f.write_str("not a match"),
-            CmdError::NoCommand(ref string) => f.write_str(string),
+            CmdError::NoCommand(ref string) => f.write_str(&format!("no command : {:?}", string)),
             CmdError::NotImplemented(ref string) => f.write_str(string),
             _ => f.write_str("unknown error :("),
         }
@@ -45,6 +47,7 @@ impl Default for CommandConsumer {
         Self { log: Vec::new() }
     }
 }
+
 // Command consumer validates and executes commands
 impl CommandConsumer {
     pub fn validate_and_exec(&mut self, state: &mut State, cmd: Result<Box<Command>, CmdError>) {
@@ -67,72 +70,50 @@ impl CommandConsumer {
         self.log.iter().map(|cmd| cmd.to_string()).collect()
     }
 }
+/////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct CommandFactory {
-    pub command_list: Vec<Box<Command>>,
+    cmd_map: HashMap<&'static str, Box<Command>>,
 }
 
 impl Default for CommandFactory {
     fn default() -> Self {
-        let list = Vec::new();
-        Self { command_list: list }
+        let mut cmd_map: HashMap<&'static str, Box<Command>> = HashMap::new();
+        Self { cmd_map }
     }
 }
 
 impl CommandFactory {
     pub fn populate(mut self) -> Self {
-        // self.command_list.push(Box::new(SaveStateCmd::default()));
-        // self.command_list.push(Box::new(LoadStateCmd::default()));
-        // self.command_list.push(Box::new(AddPointCmd::default()));
-        // self.command_list.push(Box::new(RemovePointCmd::default()));
-        // self.command_list.push(Box::new(BreakLineCmd::default()));
-        // self.command_list.push(Box::new(NewGroupCmd::default()));
-        // self.command_list.push(Box::new(NudgePointCmd::default()));
-        // self
+        self.add_cmd(Box::new(SaveStateCmd::default()));
+        self.add_cmd(Box::new(LoadStateCmd::default()));
+        self.add_cmd(Box::new(NewGroupCmd::default()));
+        self.add_cmd(Box::new(AddPointCmd::default()));
+        self.add_cmd(Box::new(RemovePointCmd::default()));
+        self.add_cmd(Box::new(NudgePointCmd::default()));
+        self
     }
+
+    pub fn add_cmd(&mut self, cmd: Box<Command>) {
+        self.cmd_map.insert(cmd.get_keyword(), cmd);
+    }
+
     pub fn string_to_command(&self, string: String) -> Result<Box<Command>, CmdError> {
-
-        let potential_commands = self
-            .command_list
-            .iter()
-            .for_each(|cmd| cmd.from_string(&string))
-            .filter(|res| res.err() != Some(CmdError::NoMatch))
-            .collect();
-
-        potential_commands.iter().for_each(|thing| println!("{:?}", thing));
-        // if let Some(first) = string.split_whitespace().next() {
-        //     match first {
-        //         "savestate" => Ok(T::from_string(string)),
-        //         // "loadstate" => Ok(LoadStateCmd::from_string(string)),
-        //         // "addpoint" => Ok(AddPointCmd::from_string(string)),
-        //         // "removepoint" => Ok(RemovePointCmd::from_string(string)),
-        //         // "newgroup" => Ok(NewGroup::from_string(string)),
-        //         // "nudgepoint" => Ok(NudePointCmd::from_string(string)),
-        //         _ => Err(format!("unknown command : {}", string)),
-        //     }
-        // } else {
-        Err("unknown command".to_string())
-        // }
-    }
-
-    fn primary_match(&self, string: String) -> Result<Box<Command>, CmdError> {
-        match string.split_whitespace().next() {
-            SaveStateCmd::get_keyword() => Ok(Box::new(SaveStateCmd::from_string(string))),
-            LoadStateCmd::get_keyword() => Ok(Box::new(LoadStateCmd::from_string(string))),
-            AddPointCmd::get_keyword() => Ok(Box::new( AddPointCmd::from_string(string))),
-            RemovePointCmd::get_keyword() => Ok(Box::new(RemovePointCmd::from_string(string))),
-            BreakLineCmd::get_keyword() => Ok(Box::new(BreakLineCmd::from_string(string))),
-            NewGroupCmd::get_keyword() => Ok(Box::new( NewGroupCmd::from_string(string))),
-            NudgePointCmd::get_keyword() => Ok(Box::new(NudgePointCmd::from_string(string))),
-            _ => Err(CmdError::NoMatch),
+        if let Some(keyword) = string.split_whitespace().nth(0) {
+            println!("looking for {}", keyword);
+            if let Some(cmd) = self.cmd_map.get(keyword){
+                println!("got cmd from map{:?}", cmd);
+                return cmd.parse_string(&string);
+            }
         }
+        Err(CmdError::NoCommand(string))
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-pub trait Command {
-    fn from_string(args: String) -> Result<Box<Self>, CmdError>;
+pub trait Command: fmt::Debug {
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError>;
     fn execute(&mut self, state: &mut State) -> Result<(), &str>;
     fn to_string(&self) -> String;
     fn get_keyword(&self) -> &'static str;
@@ -142,7 +123,6 @@ pub trait Command {
 #[derive(Debug, Default)]
 pub struct SaveStateCmd {
     pub filepath: String,
-    // keyword: &'static str,
 }
 
 impl SaveStateCmd {
@@ -155,14 +135,14 @@ impl Command for SaveStateCmd {
     fn get_keyword(&self) -> &'static str {
         "savestate"
     }
-    // static KEYWORD: &'static str = "savestate";
-    // const KEYWORD: &str = "savestate";
-    // if supplied a filename or use default
-    fn from_string(args: String) -> Result<Box<Self>, CmdError> {
-        if args.contains(Self::get_keyword()) {
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+        if args.contains(self.get_keyword()){
             match args.split_whitespace().nth(1) {
-                Some(filepath) => Ok(Box::new(Self::new(filepath.to_string()))),
-                _ => Ok(Self::new("default.json".to_string())),
+                Some(filepath) => {
+                    // self.filepath = filepath.to_string();
+                    Ok(Box::new(Self::new(filepath.to_string())))
+                },
+                _ => Err(CmdError::NoFile),
             }
         } else {
             Err(CmdError::NoMatch)
@@ -182,13 +162,6 @@ impl Command for SaveStateCmd {
     }
 }
 
-// not sure about the benefits...
-// impl fmt::Display for SaveStateCmd {
-//     fn fmt(&self, f: &mut fmt::Formatter) ->
-//         fmt::Result {
-//             write!(f, "{}", self.to_string())
-//     }
-// }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, Default)]
@@ -207,12 +180,14 @@ impl Command for LoadStateCmd {
         "loadstate"
     }
     // if supplied a filename or use default
-    fn from_string(args: String) -> Result<Box<Self>, CmdError> {
-        if args.contains(Self::get_keyword()) {
-            let mut split = args.split(" ");
-            match split.nth(1) {
-                Some(filepath) => Ok(Self::new(filepath.to_string())),
-                _ => Ok(Self::new("default.json".to_string())),
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+        if args.contains(self.get_keyword()){
+            match args.split_whitespace().nth(1) {
+                Some(filepath) => {
+                    // self.filepath = filepath.to_string();
+                    Ok(Box::new(Self::new(filepath.to_string())))
+                },
+                _ => Err(CmdError::NoFile),
             }
         } else {
             Err(CmdError::NoMatch)
@@ -229,7 +204,7 @@ impl Command for LoadStateCmd {
     }
 
     fn to_string(&self) -> String {
-        format!("savestate -f={}", self.filepath,)
+        format!("loadstate -f={}", self.filepath,)
     }
 }
 
@@ -257,13 +232,14 @@ impl Command for AddPointCmd {
         "addpoint"
     }
     // addpoint -g=3 -xy=20,30
-    fn from_string(args: String) -> Result<Box<Self>, CmdError> {
-        if args.contains(Self::get_keyword()) {
-            Ok(Self::new(0, Point::default()))
-        // can just do let x: f32 = arg.parse(); and check for error
-        } else {
-            Err(CmdError::NoMatch)
-        }
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+        // if args.contains(self.get_keyword()) {
+        //     Ok(Self::new(0, Point::default()))
+        // // can just do let x: f32 = arg.parse(); and check for error
+        // } else {
+        // }
+
+        Err(CmdError::NoFile)
     }
     // const NAME: &str = "addpoint";
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
@@ -290,13 +266,11 @@ impl Command for AddPointCmd {
             group.segments.push(state.geom.segs.len());
         // group.previous_point = Some(new_index);
         } else {
+
         }
         group.previous_point = Some(new_index);
         Ok(())
     }
-    // fn get_name(&self) -> &'static str {
-    // 	"addpoint"
-    // }
     fn to_string(&self) -> String {
         format!(
             "addpoint -g={} -xy={},{}",
@@ -322,13 +296,19 @@ impl Command for RemovePointCmd {
     fn get_keyword(&self) -> &'static str {
         "removepoint"
     }
-    fn from_string(args: String) -> Result<Box<Self>, CmdError> {
-        if args.contains(Self::get_keyword()) {
-            Ok(Self::new(0))
+
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+        if let Some(group) = args.split_whitespace().nth(1) {
+            if let Ok(index) = group.parse::<usize>() {
+                Ok(Box::new(Self::new(index)))
+            } else {
+                Err(CmdError::Malformed(args.to_string()))
+            }
         } else {
-            Err(CmdError::NoMatch)
+            Err(CmdError::Malformed(args.to_string()))
         }
     }
+
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         let group = state
             .geom
@@ -350,11 +330,8 @@ impl Command for RemovePointCmd {
         Ok(())
     }
 
-    // fn get_name(&self) -> &'static str {
-    // 	"removepoint"
-    // }
     fn to_string(&self) -> String {
-        format!("removepoint -g={}", self.group)
+        format!("removepoint {}", self.group)
     }
 }
 
@@ -376,12 +353,9 @@ impl Command for BreakLineCmd {
     fn get_keyword(&self) -> &'static str {
         "breakline"
     }
-    fn from_string(args: String) -> Result<Box<Self>, CmdError> {
-        if args.contains(Self::get_keyword()) {
-            Ok(Self::new(0, Point::default()))
-        } else {
-            Err(CmdError::NoMatch)
-        }
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+
+        Err(CmdError::NoFile)
     }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         let group = &mut state.geom.groups[self.group];
@@ -390,9 +364,7 @@ impl Command for BreakLineCmd {
         group.previous_point = Some(new_index);
         Ok(())
     }
-    // fn get_name(&self) -> &'static str {
-    // 	"breakline"
-    // }
+
     fn to_string(&self) -> String {
         format!(
             "breakline -g={} -xy={},{}",
@@ -415,21 +387,14 @@ impl Command for NewGroupCmd {
     fn get_keyword(&self) -> &'static str {
         "newgroup"
     }
-    fn from_string(args: String) -> Result<Box<Self>, CmdError> {
-        if args.contains(Self::get_keyword()) {
-            Ok(Self::new())
-        } else {
-            Err(CmdError::NoMatch)
-        }
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+        Ok(Box::new(Self::new()))
     }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         let i = state.geom.groups.len();
         state.geom.groups.push(Group::new(i));
         Ok(())
     }
-    // fn get_name(&self) -> &'static str {
-    // 	"newgroup"
-    // }
     fn to_string(&self) -> String {
         String::from("newgroup")
     }
@@ -453,12 +418,8 @@ impl Command for NudgePointCmd {
     fn get_keyword(&self) -> &'static str {
         "nudgepoint"
     }
-    fn from_string(args: String) -> Result<Box<Self>, CmdError> {
-        if args.contains(Self::get_keyword()) {
-            Ok(Self::new(0, Point::default()))
-        } else {
-            Err(CmdError::NoMatch)
-        }
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+        Err(CmdError::NoFile)
     }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         // let mut point = &mut
@@ -467,9 +428,6 @@ impl Command for NudgePointCmd {
         // point += self.nudge;
         Ok(())
     }
-    // fn get_name(&self) -> &'static str {
-    // 	"NudgePoint"
-    // }
     fn to_string(&self) -> String {
         format!(
             "nudge -p={} -xy={},{}",
