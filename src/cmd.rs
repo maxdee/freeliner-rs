@@ -100,9 +100,7 @@ impl CommandFactory {
 
     pub fn string_to_command(&self, string: String) -> Result<Box<Command>, CmdError> {
         if let Some(keyword) = string.split_whitespace().nth(0) {
-            println!("looking for {}", keyword);
             if let Some(cmd) = self.cmd_map.get(keyword){
-                println!("got cmd from map{:?}", cmd);
                 return cmd.parse_string(&string);
             }
         }
@@ -233,13 +231,32 @@ impl Command for AddPointCmd {
     }
     // addpoint -g=3 -xy=20,30
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        // if args.contains(self.get_keyword()) {
-        //     Ok(Self::new(0, Point::default()))
-        // // can just do let x: f32 = arg.parse(); and check for error
-        // } else {
-        // }
+        let mut split = args.split_whitespace();
+        split.next();
+        let group = split.next()
+            .ok_or(CmdError::Malformed(format!("missing group arg : {}", args)))?
+            .parse::<usize>()
+            .ok()
+            .ok_or(CmdError::Malformed(format!("group arg not usize : {}", args)))?;
 
-        Err(CmdError::NoFile)
+        let xpos = split.next()
+            .ok_or(CmdError::Malformed(format!("missing xpos : {}", args)))?
+            .parse::<f32>()
+            .ok()
+            .ok_or(CmdError::Malformed(format!("xpos not parseable : {}", args)))?;
+
+        let ypos = split.next()
+            .ok_or(CmdError::Malformed(format!("missing ypos : {}", args)))?
+            .parse::<f32>()
+            .ok()
+            .ok_or(CmdError::Malformed(format!("ypos not parseable : {}", args)))?;
+
+        let zpos = split.next()
+            .unwrap_or("0.0")
+            .parse::<f32>()
+            .unwrap_or(0.0);
+
+        Ok(Box::new(Self::new(group, Point::new(xpos, ypos, zpos))))
     }
     // const NAME: &str = "addpoint";
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
@@ -273,8 +290,8 @@ impl Command for AddPointCmd {
     }
     fn to_string(&self) -> String {
         format!(
-            "addpoint -g={} -xy={},{}",
-            self.group, self.new_point.x, self.new_point.y
+            "addpoint -g={} -xy={},{},{}",
+            self.group, self.new_point.x, self.new_point.y, self.new_point.z
         )
     }
 }
