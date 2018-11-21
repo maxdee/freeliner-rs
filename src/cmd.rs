@@ -19,7 +19,9 @@ pub enum CmdError {
     NoMatch,
     Malformed(String),
     NoCommand(String),
-    NotImplemented(&'static str),
+    NotImplemented(String),
+    NoSpawner(String),
+    SomeError(String),
     FileError(),
     NoFile,
 }
@@ -71,7 +73,7 @@ impl CommandConsumer {
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////
-
+// refactor the command factory as a command with sub commands??
 pub struct CommandFactory {
     cmd_map: HashMap<&'static str, Box<Command>>,
 }
@@ -134,16 +136,11 @@ impl Command for SaveStateCmd {
         "savestate"
     }
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        if args.contains(self.get_keyword()){
-            match args.split_whitespace().nth(1) {
-                Some(filepath) => {
-                    // self.filepath = filepath.to_string();
-                    Ok(Box::new(Self::new(filepath.to_string())))
-                },
-                _ => Err(CmdError::NoFile),
-            }
-        } else {
-            Err(CmdError::NoMatch)
+        match args.split_whitespace().nth(1) {
+            Some(filepath) => {
+                Ok(Box::new(Self::new(filepath.to_string())))
+            },
+            _ => Err(CmdError::NoFile),
         }
     }
 
@@ -179,16 +176,11 @@ impl Command for LoadStateCmd {
     }
     // if supplied a filename or use default
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        if args.contains(self.get_keyword()){
-            match args.split_whitespace().nth(1) {
-                Some(filepath) => {
-                    // self.filepath = filepath.to_string();
-                    Ok(Box::new(Self::new(filepath.to_string())))
-                },
-                _ => Err(CmdError::NoFile),
-            }
-        } else {
-            Err(CmdError::NoMatch)
+        match args.split_whitespace().nth(1) {
+            Some(filepath) => {
+                Ok(Box::new(Self::new(filepath.to_string())))
+            },
+            _ => Err(CmdError::NoFile),
         }
     }
 
@@ -205,6 +197,9 @@ impl Command for LoadStateCmd {
         format!("loadstate -f={}", self.filepath,)
     }
 }
+
+
+// All commands related to geometry state
 
 /////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, Default)]
@@ -371,8 +366,7 @@ impl Command for BreakLineCmd {
         "breakline"
     }
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-
-        Err(CmdError::NoFile)
+        Err(CmdError::NotImplemented(args.to_string()))
     }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         let group = &mut state.geom.groups[self.group];
@@ -436,7 +430,7 @@ impl Command for NudgePointCmd {
         "nudgepoint"
     }
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        Err(CmdError::NoFile)
+        Err(CmdError::NotImplemented(args.to_string()))
     }
     fn execute(&mut self, state: &mut State) -> Result<(), &str> {
         // let mut point = &mut
@@ -452,20 +446,84 @@ impl Command for NudgePointCmd {
         )
     }
 }
-//
-// impl Command for AddPoint {
-// 	fn execute(&mut self, state: State) -> Result<(), &str> {
-// 		let &mut group = &mut state.geometric_data.groups[self.index];
-// 		// self.do(&self.parat)
-// 		if let Some(previous_point) = group.previous_point {
-// 			let mut seg = StraightSegment::new(&previous_point, &self.new_point);
-// 			group.segments.push(seg);
-// 		}
-// 		else {
-// 			let p = Point::copy(&self.new_point);
-// 			group.previous_point.unwrap().set(&p);// = Some(p);
-// 			// self.group.previous_point.as_mut().unwrap().set(&p);// = Some(p);
-// 		}
-// 		Ok(())
-// 	}
-// }
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// spawn spawner_name node node_name arg value
+// spawn spawner_name graph iter-1011 segs-1017 enter-1015 brush-1014
+
+#[derive(Debug)]
+pub struct SpawnerCommandDispatch {
+    spawners: HashMap<String, Vec<String>>,
+    sub_commands: HashMap<&'static str, Box<Command>>,
+}
+
+impl SpawnerCommandDispatch {
+    pub fn new() -> Self {
+        let sub_commands = HashMap::new();
+        Self {
+            spawners: HashMap::new(),
+            sub_commands,
+        }
+    }
+    pub fn populate(mut self) -> Self {
+        self.add_cmd(Box::new(SpawnerGraphCmd::new("blank".to_string(), "blank".to_string())));
+        self
+    }
+
+    pub fn add_cmd(&mut self, cmd: Box<Command>) {
+        self.sub_commands.insert(cmd.get_keyword(), cmd);
+    }
+}
+
+impl Command for SpawnerCommandDispatch {
+    fn get_keyword(&self) -> &'static str {
+        "spawn"
+    }
+    // spawn spawner_name subcommand args....
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+        let mut split = args.split_whitespace();
+        let spawner_name = split.nth(1).ok_or(CmdError::NoSpawner(format!("missing spawner name {}", args)))?;
+
+        if let Some(sp_cmd) = self.sub_commands.get(&spawner_name) {
+            sp_cmd.parse_string(args)
+        } else {
+            Err(CmdError::NoSpawner(spawner_name.to_string()))
+        }
+    }
+    fn execute(&mut self, state: &mut State) -> Result<(), &str> {
+        // the dispatch should not have to execute anything, only dispatched commands will
+        Ok(())
+    }
+    fn to_string(&self) -> String {
+        "spawnerCommandDispatch ???".to_string()
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
+pub struct SpawnerGraphCmd {
+    spawner_name: String,
+    graph: String,
+}
+
+impl SpawnerGraphCmd {
+    pub fn new(spawner_name: String, graph: String) -> Self {
+        Self{spawner_name, graph}
+    }
+}
+
+impl Command for SpawnerGraphCmd {
+    fn get_keyword(&self) -> &'static str {
+        "graph"
+    }
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+        Err(CmdError::NotImplemented("spawnergraphcmd not implemented".to_string()))
+    }
+    fn execute(&mut self, state: &mut State) -> Result<(), &str> {
+        // parse the
+        Ok(())
+    }
+    fn to_string(&self) -> String {
+        "spawngraphcmd ???".to_string()
+    }
+}

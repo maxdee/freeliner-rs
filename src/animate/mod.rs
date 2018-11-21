@@ -12,17 +12,22 @@ pub use self::timer::Timer;
 #[derive(Debug)]
 pub struct Animator {
     // timer: Timer,
-    spawner: Spawner,
+    // spawner: Spawner,
+    spawners: Vec<Spawner>,
     temp: f32,
 }
 
 impl Default for Animator {
     fn default() -> Self {
-        let mut spawner = Spawner::default();
-        spawner.add_geom(0).add_geom(1).setup_nodes();
+        let mut spawners = Vec::new();//
+        let mut spwnr = Spawner::default();
+        spwnr.add_geom(0).setup_nodes();
+        // spwnr.add_geom(0).add_geom(1).setup_nodes();
+
+        spawners.push(spwnr);
         Self {
             // timer: Timer::default(),
-            spawner,
+            spawners,
             temp: 0.0,
         }
     }
@@ -31,8 +36,11 @@ impl Default for Animator {
 impl Animator {
     pub fn animate(&mut self, geom: &Data) -> Vec<RenderItem> {
         self.temp += 0.013;
-        self.temp = self.temp.fract();
-        self.spawner.run(self.temp, geom)
+        let lerp = self.temp.fract();
+
+        self.spawners.iter_mut()
+            .flat_map(|sp| sp.run(lerp, geom))
+            .collect()
     }
 }
 
@@ -94,12 +102,18 @@ impl Spawner {
         self
     }
     pub fn run(&mut self, unit: f32, geom: &Data) -> Vec<RenderItem> {
-        let starts = geom.groups.iter().map(|g| (g.index, unit)).collect();
-        // if geom.groups.len() < 1 {
-        //     return Vec::new();
-        // }
+        // make a vec
+        //
+        let starts:Vec<(usize, f32)> = self.groups.iter().map(|g| (*g, unit)).collect();
+
+        if geom.groups.len() < 1 {
+            return Vec::new();
+        } else {
+
+        }
 
         let mut event = Event {
+            mode: EventModes::Loop,
             unit,
             groups: starts,
             segments: Vec::new(),
@@ -107,21 +121,39 @@ impl Spawner {
             units: Vec::new(),
             items: Vec::new(),
         };
-
+        // items.clear();
+        // starts.iter().map(|start| {
         for node in self.nodes.iter() {
             event = node.do_thing(event, geom);
             // println!("//////////////{:?}//////////////////", node);
             // println!("event :{:#?}", event);
         }
-        // self.nodes.iter().fold(event, |n, ev| n.do_thing(ev, geom));
+        // }
+        // items
+
+        // // self.nodes.iter().fold(event, |n, ev| n.do_thing(ev, geom));
         event.items
     }
 }
 
 #[derive(Debug)]
+enum EventModes {
+    Loop,
+    FadeOut,
+    Single,
+}
+
+// pub struct Event {
+//     selected_groups: Vec<usize>, // the groups we render to
+//
+//     mode: EventModes,
+// }
+
+#[derive(Debug)]
 pub struct Event {
+    mode: EventModes,
     unit: f32,
-    groups: Vec<(usize, f32)>,
+    groups: Vec<(usize, f32)>, // good question
     segments: Vec<(usize, f32)>,
     points: Vec<(Point, f32)>,
     units: Vec<f32>,
