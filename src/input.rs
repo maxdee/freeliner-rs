@@ -36,7 +36,10 @@ impl Input {
 
     // receive string and maybe execute them
     // not sure about stati
-
+    pub fn receive_osc_string(&mut self, state: &mut State, string: String){
+        self.string_command(state, string);
+        // println!("got a osc command! ----- {}",string);
+    }
     pub fn string_command(&mut self, state: &mut State, string: String) {
         let mut res = self.cmd_factory.string_to_command(string);
         match res {

@@ -93,6 +93,8 @@ impl CommandFactory {
         self.add_cmd(Box::new(AddPointCmd::default()));
         self.add_cmd(Box::new(RemovePointCmd::default()));
         self.add_cmd(Box::new(NudgePointCmd::default()));
+        self.add_cmd(Box::new(SpawnerCommandDispatch::default()));
+
         self
     }
 
@@ -451,7 +453,7 @@ impl Command for NudgePointCmd {
 // spawn spawner_name node node_name arg value
 // spawn spawner_name graph iter-1011 segs-1017 enter-1015 brush-1014
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SpawnerCommandDispatch {
     spawners: HashMap<String, Vec<String>>,
     sub_commands: HashMap<&'static str, Box<Command>>,
@@ -500,7 +502,7 @@ impl Command for SpawnerCommandDispatch {
 }
 
 //////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SpawnerGraphCmd {
     spawner_name: String,
     graph: String,
