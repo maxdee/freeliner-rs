@@ -7,13 +7,13 @@ pub mod segment;
 pub const NONE_GROUP: usize = 0;
 
 #[derive(Default, Debug, Serialize, Deserialize)]
-pub struct Data {
+pub struct Geometry {
     pub points: Vec<Point>,
     pub segs: Vec<Segment>,
     pub groups: Vec<Group>,
 }
 
-impl Data {
+impl Geometry {
     // make new data
     pub fn new() -> Self {
         Self {

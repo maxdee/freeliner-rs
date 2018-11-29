@@ -1,12 +1,15 @@
 use super::super::geometry::*;
-use super::{Event, RenderItem};
+use super::{Basket, RenderItem};
 use std::fmt::Debug;
 
 /////////////////////////////////////////////////////////////////////////////////////
 // #[derive(Debug)]
 pub trait Node: Debug {
-    fn do_thing(&self, event: Event, geom: &Data) -> Event;
+    fn do_thing(&self, basket: Basket, geom: &Geometry) -> Basket;
+    fn get_name(&self) -> &str;
+
 }
+
 /*
 // Expose node parameters to UI!
 pub struct SomeNode {
@@ -20,47 +23,61 @@ pub struct SomeNode {
 #[derive(Debug)]
 pub struct Iterate {
     pub count: u32,
+    pub name: String,
 }
 
 impl Node for Iterate {
-    fn do_thing(&self, mut event: Event, _geom: &Data) -> Event {
-        let a = event.unit / self.count as f32;
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+    fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
+        let a = basket.unit / self.count as f32;
         let i = 1.0 / self.count as f32;
-        event.units = (0..self.count).map(|x| x as f32 * i + a).collect();
-        event
+        basket.units = (0..self.count).map(|x| x as f32 * i + a).collect();
+        basket
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
-pub struct GroupPicker {}
+pub struct GroupPicker {
+    pub name: String,
+}
 
 impl Node for GroupPicker {
-    fn do_thing(&self, mut event: Event, _geom: &Data) -> Event {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+    fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
         let mut group_list: Vec<(usize, f32)> = Vec::new();
-        event
+        basket
             .groups
             .iter()
-            .for_each(|g| event.units.iter().for_each(|u| group_list.push((g.0, *u))));
-        event.groups = group_list;
-        event
+            .for_each(|g| basket.units.iter().for_each(|u| group_list.push((g.0, *u))));
+        basket.groups = group_list;
+        basket
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
-pub struct SelectSegs {}
+pub struct SelectSegs {
+    pub name: String,
+}
 
 impl Node for SelectSegs {
-    fn do_thing(&self, mut event: Event, geom: &Data) -> Event {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+    fn do_thing(&self, mut basket: Basket, geom: &Geometry) -> Basket {
         let mut seg_list: Vec<(usize, f32)> = Vec::new();
-        // event.groups.iter().map(|g| {
+        // basket.groups.iter().map(|g| {
         //     geom.groups[g.0]
         //         .segments
         //         .iter()
         //         .map(|s| (s, g.1)).collect()
         // }).flatten().collect();
-        event.groups.iter().for_each(|g| {
+        basket.groups.iter().for_each(|g| {
             if !geom.groups[g.0].segments.is_empty() {
                 geom.groups[g.0]
                     .segments
@@ -69,18 +86,23 @@ impl Node for SelectSegs {
             }
         });
 
-        event.segments = seg_list;
-        event
+        basket.segments = seg_list;
+        basket
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
-pub struct Enterpolator {}
+pub struct Enterpolator {
+    pub name: String,
+}
 
 impl Node for Enterpolator {
-    fn do_thing(&self, mut event: Event, geom: &Data) -> Event {
-        event.points = event
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+    fn do_thing(&self, mut basket: Basket, geom: &Geometry) -> Basket {
+        basket.points = basket
             .segments
             .iter()
             .map(|s| {
@@ -92,7 +114,7 @@ impl Node for Enterpolator {
                 )
             })
             .collect();
-        event
+        basket
     }
 }
 
@@ -101,11 +123,15 @@ impl Node for Enterpolator {
 pub struct DrawDot {
     pub size: f32,
     // some sort of keyframes
+    pub name: String,
 }
 
 impl Node for DrawDot {
-    fn do_thing(&self, mut event: Event, _geom: &Data) -> Event {
-        event.items = event
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+    fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
+        basket.items = basket
             .points
             .iter()
             .map(|p| RenderItem::Dot {
@@ -114,7 +140,7 @@ impl Node for DrawDot {
                 unit: p.1,
             })
             .collect();
-        event
+        basket
     }
 }
 
@@ -122,6 +148,7 @@ impl Node for DrawDot {
 #[derive(Debug)]
 pub struct SizeModulator {
     // some sort of keyframes
+    pub name: String,
 }
 
 impl SizeModulator {
@@ -135,10 +162,13 @@ impl SizeModulator {
 }
 
 impl Node for SizeModulator {
-    fn do_thing(&self, mut event: Event, _geom: &Data) -> Event {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+    fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
         {
-            // let ev = &mut event;
-            event.items.iter_mut().for_each(|item| match item {
+            // let ev = &mut basket;
+            basket.items.iter_mut().for_each(|item| match item {
                 RenderItem::Dot {
                     ref mut size, unit, ..
                 } => *size = self.modulate(*size, *unit),
@@ -150,13 +180,14 @@ impl Node for SizeModulator {
                 _ => (),
             });
         }
-        event
+        basket
     }
 }
 //////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct ExpandContract {
     // some sort of keyframes
+    pub name: String,
 }
 
 // impl ExpandContract {
@@ -166,22 +197,32 @@ pub struct ExpandContract {
 // }
 
 impl Node for ExpandContract {
-    fn do_thing(&self, mut event: Event, _geom: &Data) -> Event {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+    fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
         {
-            // let ev = &mut event;
-            if !event.items.is_empty() {
-                match event.items[0] {
+            // let ev = &mut basket;
+            if !basket.items.is_empty() {
+                match basket.items[0] {
                     RenderItem::Dot {
                         ref mut size, unit, ..
                     } => {
                         if unit < 0.5 {
                             *size *= unit * 2.0
                         }
-                    }
+                    },
+                    RenderItem::Line {
+                        ref mut weight, unit, ..
+                    } => {
+                        if unit < 0.5 {
+                            *weight *= unit * 2.0
+                        }
+                    },
                     _ => (),
                 }
-                let last = event.items.len() - 1;
-                match event.items[last] {
+                let last = basket.items.len() - 1;
+                match basket.items[last] {
                     RenderItem::Dot {
                         ref mut size, unit, ..
                     } => {
@@ -195,6 +236,6 @@ impl Node for ExpandContract {
             // for_each(|item| {
             // });
         }
-        event
+        basket
     }
 }
