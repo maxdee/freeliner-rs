@@ -651,7 +651,6 @@ impl Command for NodeTreeCmd {
         "graph"
     }
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        println!("here is the node tree! {}", args);
         let mut split = args.split_whitespace();
         let context_name = split
             .next()
@@ -664,6 +663,8 @@ impl Command for NodeTreeCmd {
             .ok_or_else(|| CmdError::Malformed(format!("missing tree name : {}", args)))?
             .to_string();
 
+        // skip the graph
+        split.next();
         let mut graph = split
             .fold(String::new(), |mut graph, node| {graph.push_str(node);graph.push(' '); graph});
 
@@ -682,6 +683,6 @@ impl Command for NodeTreeCmd {
         }
     }
     fn to_string(&self) -> String {
-        "spawngraphcmd ???".to_string()
+        "node tree making".to_string()
     }
 }

@@ -22,7 +22,6 @@ pub struct SomeNode {
 #[derive(Debug)]
 pub struct Iterate {
     pub count: u32,
-    pub name: String,
     pub node_id: usize,
 }
 
@@ -31,7 +30,7 @@ impl Node for Iterate {
         self.node_id
     }
     fn get_name(&self) -> &str {
-        &self.name
+        "iter"
     }
     fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
         let a = basket.unit / self.count as f32;
@@ -44,7 +43,6 @@ impl Node for Iterate {
 /////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct GroupPicker {
-    pub name: String,
     pub node_id: usize,
 }
 
@@ -53,7 +51,7 @@ impl Node for GroupPicker {
         self.node_id
     }
     fn get_name(&self) -> &str {
-        &self.name
+        "groups"
     }
     fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
         let mut group_list: Vec<(usize, f32)> = Vec::new();
@@ -69,7 +67,6 @@ impl Node for GroupPicker {
 /////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct SelectSegs {
-    pub name: String,
     pub node_id: usize,
 }
 
@@ -78,7 +75,7 @@ impl Node for SelectSegs {
         self.node_id
     }
     fn get_name(&self) -> &str {
-        &self.name
+        "segs"
     }
     fn do_thing(&self, mut basket: Basket, geom: &Geometry) -> Basket {
         let mut seg_list: Vec<(usize, f32)> = Vec::new();
@@ -107,7 +104,6 @@ impl Node for SelectSegs {
 //////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct Enterpolator {
-    pub name: String,
     pub node_id: usize,
 }
 
@@ -116,7 +112,7 @@ impl Node for Enterpolator {
         self.node_id
     }
     fn get_name(&self) -> &str {
-        &self.name
+        "enter"
     }
     fn do_thing(&self, mut basket: Basket, geom: &Geometry) -> Basket {
         basket.points = basket
@@ -140,7 +136,6 @@ impl Node for Enterpolator {
 pub struct DrawDot {
     pub size: f32,
     // some sort of keyframes
-    pub name: String,
     pub node_id: usize,
 
 }
@@ -150,7 +145,7 @@ impl Node for DrawDot {
         self.node_id
     }
     fn get_name(&self) -> &str {
-        &self.name
+        "brush"
     }
     fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
         basket.items = basket
@@ -170,7 +165,6 @@ impl Node for DrawDot {
 #[derive(Debug)]
 pub struct SizeModulator {
     // some sort of keyframes
-    pub name: String,
     pub node_id: usize,
 
 }
@@ -190,7 +184,7 @@ impl Node for SizeModulator {
         self.node_id
     }
     fn get_name(&self) -> &str {
-        &self.name
+        "sizemod"
     }
     fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
         {
@@ -214,7 +208,6 @@ impl Node for SizeModulator {
 #[derive(Debug)]
 pub struct ExpandContract {
     // some sort of keyframes
-    pub name: String,
     pub node_id: usize,
 
 }
@@ -230,7 +223,7 @@ impl Node for ExpandContract {
         self.node_id
     }
     fn get_name(&self) -> &str {
-        &self.name
+        "expand_contract"
     }
     fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
         {
