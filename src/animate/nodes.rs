@@ -6,6 +6,7 @@ use std::fmt::Debug;
 pub trait Node: Debug {
     fn do_thing(&self, basket: Basket, geom: &Geometry) -> Basket;
     fn get_name(&self) -> &str;
+    fn get_id(&self) -> usize;
 }
 
 /*
@@ -22,9 +23,13 @@ pub struct SomeNode {
 pub struct Iterate {
     pub count: u32,
     pub name: String,
+    pub node_id: usize,
 }
 
 impl Node for Iterate {
+    fn get_id(&self) -> usize {
+        self.node_id
+    }
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -40,9 +45,13 @@ impl Node for Iterate {
 #[derive(Debug)]
 pub struct GroupPicker {
     pub name: String,
+    pub node_id: usize,
 }
 
 impl Node for GroupPicker {
+    fn get_id(&self) -> usize {
+        self.node_id
+    }
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -61,9 +70,13 @@ impl Node for GroupPicker {
 #[derive(Debug)]
 pub struct SelectSegs {
     pub name: String,
+    pub node_id: usize,
 }
 
 impl Node for SelectSegs {
+    fn get_id(&self) -> usize {
+        self.node_id
+    }
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -76,11 +89,13 @@ impl Node for SelectSegs {
         //         .map(|s| (s, g.1)).collect()
         // }).flatten().collect();
         basket.groups.iter().for_each(|g| {
-            if !geom.groups[g.0].segments.is_empty() {
-                geom.groups[g.0]
+            if geom.groups.len() > g.0{
+                if !geom.groups[g.0].segments.is_empty() {
+                    geom.groups[g.0]
                     .segments
                     .iter()
                     .for_each(|s| seg_list.push((*s, g.1)));
+                }
             }
         });
 
@@ -93,9 +108,13 @@ impl Node for SelectSegs {
 #[derive(Debug)]
 pub struct Enterpolator {
     pub name: String,
+    pub node_id: usize,
 }
 
 impl Node for Enterpolator {
+    fn get_id(&self) -> usize {
+        self.node_id
+    }
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -122,9 +141,14 @@ pub struct DrawDot {
     pub size: f32,
     // some sort of keyframes
     pub name: String,
+    pub node_id: usize,
+
 }
 
 impl Node for DrawDot {
+    fn get_id(&self) -> usize {
+        self.node_id
+    }
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -147,6 +171,8 @@ impl Node for DrawDot {
 pub struct SizeModulator {
     // some sort of keyframes
     pub name: String,
+    pub node_id: usize,
+
 }
 
 impl SizeModulator {
@@ -160,6 +186,9 @@ impl SizeModulator {
 }
 
 impl Node for SizeModulator {
+    fn get_id(&self) -> usize {
+        self.node_id
+    }
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -186,6 +215,8 @@ impl Node for SizeModulator {
 pub struct ExpandContract {
     // some sort of keyframes
     pub name: String,
+    pub node_id: usize,
+
 }
 
 // impl ExpandContract {
@@ -195,6 +226,9 @@ pub struct ExpandContract {
 // }
 
 impl Node for ExpandContract {
+    fn get_id(&self) -> usize {
+        self.node_id
+    }
     fn get_name(&self) -> &str {
         &self.name
     }

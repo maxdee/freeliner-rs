@@ -22,17 +22,28 @@ pub mod input;
 // pub mod instance;
 
 use std::collections::HashMap;
+use std::iter::FromIterator;
 
-pub use self::animate::Animator;
+pub use self::animate::{Animator, RenderItem};
 pub use self::geometry::Geometry;
 pub use self::input::Input;
+pub use self::cmd::*;
 
 pub struct Freeliner {
     pub input: Input,
     pub state: State,
     // pub animator: Animator,
 }
-pub use self::cmd::*;
+
+impl Freeliner {
+    pub fn get_frame(&mut self) -> Vec<RenderItem> {
+        self.state
+            .context_map
+            .iter_mut()
+            .flat_map(|ctx| ctx.1.animator.animate(&ctx.1.geometry) )
+            .collect()
+    }
+}
 
 // pub const COMMAND_FACTORY: CommandFactory = CommandFactory::default();
 
@@ -45,11 +56,12 @@ impl Default for Freeliner {
 
         Freeliner { input, state }
     }
+
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct State {
-    context_map: HashMap<String, Context>,
+    pub context_map: HashMap<String, Context>,
     // add context id usizes?
 }
 
@@ -85,7 +97,7 @@ impl Context {
         Self {
             name,
             geometry: Geometry::new(),
-            animator: Animator::default(),
+            animator: Animator::default().populate(),
         }
     }
 }

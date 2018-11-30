@@ -102,7 +102,7 @@ impl CommandFactory {
         self.add_cmd(Box::new(AddPointCmd::default()));
         self.add_cmd(Box::new(RemovePointCmd::default()));
         self.add_cmd(Box::new(NudgePointCmd::default()));
-        self.add_cmd(Box::new(SpawnerCommandDispatch::default()));
+        self.add_cmd(Box::new(NodeTreeCmdDispatch::default().populate()));
 
         self
     }
@@ -112,7 +112,7 @@ impl CommandFactory {
     }
 
     pub fn add_subcommands(&mut self, _keyword: &str, _options: Vec<String>) {
-        // self.cmd_map.get("spawn").add_spawner(sp);
+        // self.cmd_map.get("spawn").add_node_tree(sp);
     }
 
     pub fn string_to_command(&self, string: String) -> Result<Box<Command>, CmdError> {
@@ -543,26 +543,26 @@ impl Command for NudgePointCmd {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-// spawn node_tree_name node node_name arg value
-// spawn node_tree_name graph iter-1011 segs-1017 enter-1015 brush-1014
+// default_ctx A node node_name arg value
+// default A graph iter-1011 segs-1017 enter-1015 brush-1014
 
 #[derive(Debug, Default)]
-pub struct SpawnerCommandDispatch {
+pub struct NodeTreeCmdDispatch {
     context_name: String,
-    spawners_n_nodes: HashMap<String, Vec<String>>,
+    trees_n_nodes: HashMap<String, Vec<String>>,
     sub_commands: HashMap<&'static str, Box<Command>>,
 }
 
-impl SpawnerCommandDispatch {
+impl NodeTreeCmdDispatch {
     pub fn new(context_name: String) -> Self {
         let sub_commands = HashMap::new();
         Self {
             context_name,
-            spawners_n_nodes: HashMap::new(),
+            trees_n_nodes: HashMap::new(),
             sub_commands,
         }
     }
-
+    // add comands for individual nodes
     pub fn populate(mut self) -> Self {
         self.add_cmd(Box::new(NodeTreeCmd::new(
             "default".to_string(),
@@ -571,39 +571,47 @@ impl SpawnerCommandDispatch {
         )));
         self
     }
+    pub fn add_cmd(&mut self, cmd: Box<Command>) {
+        self.sub_commands.insert(cmd.get_keyword(), cmd);
+    }
 
-    pub fn add_spawner(&mut self, node_tree: &NodeTree) {
+    pub fn add_node_tree(&mut self, node_tree: &NodeTree) {
         let nodes = node_tree
             .nodes
             .iter()
             .map(|node| String::from(node.get_name()))
             .collect();
-        self.spawners_n_nodes
+        self.trees_n_nodes
             .insert(String::from(node_tree.get_name()), nodes);
-    }
-    pub fn add_cmd(&mut self, cmd: Box<Command>) {
-        self.sub_commands.insert(cmd.get_keyword(), cmd);
     }
 }
 
-impl Command for SpawnerCommandDispatch {
+impl Command for NodeTreeCmdDispatch {
     fn get_context_name(&self) -> &str {
         &self.context_name
     }
     fn get_keyword(&self) -> &'static str {
         "tree"
     }
-    // spawn node_tree_name subcommand args....
+    // default tree A subcommand args....
+
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
         let mut split = args.split_whitespace();
+        // consume defualt tree
+        split.next();
+        split.next();
         let node_tree_name = split
-            .nth(1)
-            .ok_or_else(|| CmdError::Malformed(format!("missing spawner name {}", args)))?;
+            .next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing node_tree name {}", args)))?;
 
-        if let Some(sp_cmd) = self.sub_commands.get(&node_tree_name) {
+        let cmd_name = split
+            .next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing node_tree command name {}", args)))?;
+
+        if let Some(sp_cmd) = self.sub_commands.get(&cmd_name) {
             sp_cmd.parse_string(args)
         } else {
-            Err(CmdError::Malformed(node_tree_name.to_string()))
+            Err(CmdError::Malformed(cmd_name.to_string()))
         }
     }
 
@@ -643,13 +651,35 @@ impl Command for NodeTreeCmd {
         "graph"
     }
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        Err(CmdError::NotImplemented(
-            "spawnergraphcmd not implemented".to_string(),
-        ))
+        println!("here is the node tree! {}", args);
+        let mut split = args.split_whitespace();
+        let context_name = split
+            .next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing context name : {}", args)))?
+            .to_string();
+        // consume "tree"
+        split.next();
+        let node_tree_name = split
+            .next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing tree name : {}", args)))?
+            .to_string();
+
+        let mut graph = split
+            .fold(String::new(), |mut graph, node| {graph.push_str(node);graph.push(' '); graph});
+
+        Ok(Box::new(NodeTreeCmd::new(context_name, node_tree_name, graph)))
     }
+
     fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         // parse the
-        Ok(())
+        if let Some(tree) = context.animator.node_trees.get_mut(&self.node_tree_name) {
+            tree.parse_graph_string(self.graph.clone());
+            Ok(())
+        } else {
+            Err(CmdError::NoExecute(
+                format!("no graph tree found {}, perhaps create {}", self.node_tree_name, self.node_tree_name)
+            ))
+        }
     }
     fn to_string(&self) -> String {
         "spawngraphcmd ???".to_string()

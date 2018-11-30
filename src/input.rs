@@ -7,11 +7,11 @@ pub struct Input {
     pub cursor_position: Point,
     pub selected_group_index: usize,
     pub cursor_line: (Point, Point),
+    pub selected_context: String,
     snap_distance: f32,
     snap_list: Vec<(usize, f32)>,
     consumer: CommandConsumer,
     cmd_factory: CommandFactory,
-    selected_context: String,
 
 }
 
@@ -33,7 +33,7 @@ impl Input {
             snap_list: Vec::new(),
             consumer: CommandConsumer::default(),
             cmd_factory: CommandFactory::default().populate(),
-            selected_context: "defualt".to_string(),
+            selected_context: "default".to_string(),
 
         }
     }

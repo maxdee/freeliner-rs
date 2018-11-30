@@ -4,7 +4,7 @@ pub mod nodes;
 pub mod timer;
 pub use self::nodes::*;
 pub use self::timer::Timer;
-
+pub use std::collections::HashMap;
 // pub trait RenderItem {
 //     // fn to_string(&self) -> String;
 // }
@@ -13,18 +13,13 @@ pub use self::timer::Timer;
 pub struct Animator {
     // timer: Timer,
     // spawner: NodeTree,
-    pub node_trees: Vec<NodeTree>,
+    pub node_trees: HashMap<String, NodeTree>,
     pub temp: f32,
 }
 
 impl Default for Animator {
     fn default() -> Self {
-        let mut node_trees = Vec::new(); //
-        let mut spwnr = NodeTree::new("aspawner".to_string());
-        spwnr.add_geom(0).setup_nodes();
-        // spwnr.add_geom(0).add_geom(1).setup_nodes();
-
-        node_trees.push(spwnr);
+        let mut node_trees = HashMap::new(); //
         Self {
             // timer: Timer::default(),
             node_trees,
@@ -40,8 +35,17 @@ impl Animator {
 
         self.node_trees
             .iter_mut()
-            .flat_map(|sp| sp.run(lerp, geom))
+            .flat_map(|sp| sp.1.run(lerp, geom))
             .collect()
+    }
+    pub fn populate(mut self) -> Self {
+        let mut aaa = NodeTree::new("A".to_string());
+        aaa.add_geom(0).setup_nodes();
+        self.add_node_tree(aaa);
+        self
+    }
+    pub fn add_node_tree(&mut self, tree: NodeTree) {
+        self.node_trees.insert(tree.get_name().to_string(), tree);
     }
 }
 
@@ -101,36 +105,46 @@ impl NodeTree {
         self.nodes.push(Box::new(Iterate {
             count: 5,
             name: "iter".to_string(),
+            node_id: 1,
         }));
         self.nodes.push(Box::new(GroupPicker {
             name: "groups".to_string(),
+            node_id: 2,
         }));
         self.nodes.push(Box::new(SelectSegs {
             name: "segs".to_string(),
+            node_id: 3,
         }));
         self.nodes.push(Box::new(Enterpolator {
             name: "enter".to_string(),
+            node_id: 4,
         }));
         self.nodes.push(Box::new(DrawDot {
             size: 10.0,
             name: "brush".to_string(),
+            node_id: 5,
         }));
         // self.nodes.push(Box::new(SizeModulator {name: }));
         self.nodes.push(Box::new(ExpandContract {
             name: "expand".to_string(),
+            node_id: 6,
         }));
         self
     }
+
+    pub fn parse_graph_string(&mut self, graph_string: String) {
+        println!("Helloo im node tree and i parse {}", graph_string);
+    }
+
     pub fn run(&mut self, unit: f32, geom: &Geometry) -> Vec<RenderItem> {
         // make a vec
         //
         let starts: Vec<(usize, f32)> = self.groups.iter().map(|g| (*g, unit)).collect();
 
-        if !geom.groups.is_empty() {
+        if geom.groups.is_empty() {
             return Vec::new();
-        } else {
-
         }
+
 
         let mut basket = Basket {
             mode: BasketModes::Loop,
