@@ -3,7 +3,6 @@ pub use self::segment::*;
 pub mod point;
 pub mod segment;
 
-
 pub const NONE_GROUP: usize = 0;
 
 #[derive(Default, Debug, Serialize, Deserialize)]

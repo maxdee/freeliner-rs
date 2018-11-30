@@ -3,11 +3,9 @@ use super::{Basket, RenderItem};
 use std::fmt::Debug;
 
 /////////////////////////////////////////////////////////////////////////////////////
-// #[derive(Debug)]
 pub trait Node: Debug {
     fn do_thing(&self, basket: Basket, geom: &Geometry) -> Basket;
     fn get_name(&self) -> &str;
-
 }
 
 /*
@@ -211,14 +209,16 @@ impl Node for ExpandContract {
                         if unit < 0.5 {
                             *size *= unit * 2.0
                         }
-                    },
+                    }
                     RenderItem::Line {
-                        ref mut weight, unit, ..
+                        ref mut weight,
+                        unit,
+                        ..
                     } => {
                         if unit < 0.5 {
                             *weight *= unit * 2.0
                         }
-                    },
+                    }
                     _ => (),
                 }
                 let last = basket.items.len() - 1;

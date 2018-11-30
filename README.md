@@ -4,9 +4,8 @@ Freeliner is a geometric animation software. The first version was made with Pro
 The rest of the document are notes and stuff.
 
 #### Animation Nodes
-chainable definition of drawing instructions,
+A set of nodes that turns some geometry into rendering lists.
 - livecodeable?
-    - how to support variables?
 
 ```
 animation(event, LOOP || TRIGGER) // starts an animation event

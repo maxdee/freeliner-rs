@@ -1,25 +1,25 @@
 extern crate serde;
 extern crate serde_json;
 
-pub use super::{State, Context};
-use super::animate::Spawner;
+use super::animate::NodeTree;
+pub use super::{Context, State};
 pub use geometry::*;
 
 // use self::serde_json::Error;
 
 // use std::error;
+use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
-use std::collections::HashMap;
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-pub use super::COMMAND_FACTORY;
+// pub use super::COMMAND_FACTORY;
 
-pub fn register_commands() {
-    COMMAND_FACTORY.add_cmd(Box::new(SaveStateCmd::default()));
-}
+// pub fn register_commands() {
+//     COMMAND_FACTORY.add_cmd(Box::new(SaveStateCmd::default()));
+// }
 
 #[derive(Debug)]
 pub enum CmdError {
@@ -27,10 +27,8 @@ pub enum CmdError {
     Malformed(String),
     NoCommand(String),
     NotImplemented(String),
-    NoSpawner(String),
     SomeError(String),
     FileError(),
-    NoFile,
     NoContext(String),
     NoExecute(String),
 }
@@ -120,7 +118,7 @@ impl CommandFactory {
     pub fn string_to_command(&self, string: String) -> Result<Box<Command>, CmdError> {
         // we need to skip the context name
         if let Some(keyword) = string.split_whitespace().nth(1) {
-            if let Some(cmd) = self.cmd_map.get(keyword){
+            if let Some(cmd) = self.cmd_map.get(keyword) {
                 return cmd.parse_string(&string);
             }
         }
@@ -137,16 +135,11 @@ pub trait Command: fmt::Debug {
     fn get_context_name(&self) -> &str;
     fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError>;
     fn execute(&mut self, state: &mut State) -> Result<(), CmdError> {
-        let mut ctxs = state.get_contexts(self.get_context_name());
-        let results: Vec<Result<(), CmdError>> = ctxs.iter()
-            .map(|ct| {
-                match ct {
-                    Some(c) => self.real_exec(*c),
-                    _ => Err(CmdError::NoContext(self.get_context_name().to_string())),
-                }
-            })
-            .collect();
-        results[0]
+        let mut ctx = state.get_context(self.get_context_name());
+        match ctx {
+            Some(c) => self.real_exec(c),
+            _ => Err(CmdError::NoContext(self.get_context_name().to_string())),
+        }
     }
 }
 
@@ -159,7 +152,10 @@ pub struct SaveStateCmd {
 
 impl SaveStateCmd {
     pub fn new(filepath: String) -> Self {
-        Self{ context_name: "*".to_string(), filepath }
+        Self {
+            context_name: "*".to_string(),
+            filepath,
+        }
     }
 }
 
@@ -172,11 +168,9 @@ impl Command for SaveStateCmd {
     }
 
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        match args.split_whitespace().nth(1) {
-            Some(filepath) => {
-                Ok(Box::new(Self::new(filepath.to_string())))
-            },
-            _ => Err(CmdError::NoFile),
+        match args.split_whitespace().nth(2) {
+            Some(filepath) => Ok(Box::new(Self::new(filepath.to_string()))),
+            _ => Err(CmdError::FileError()),
         }
     }
 
@@ -187,11 +181,8 @@ impl Command for SaveStateCmd {
         file.write_all(&j).unwrap();
         Ok(())
     }
-    fn real_exec(&mut self, context : &mut Context) -> Result<(), CmdError> {
-        // let j = serde_json::to_vec(state).unwrap();
-        // let f = self.filepath.clone();
-        // let mut file = File::create(f).unwrap();
-        // file.write_all(&j).unwrap();
+
+    fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         Ok(())
     }
 
@@ -200,35 +191,30 @@ impl Command for SaveStateCmd {
     }
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, Default)]
 pub struct LoadStateCmd {
-    context_name: String,
     pub filepath: String,
 }
 
 impl LoadStateCmd {
-    pub fn new(context_name: String, filepath: String) -> Self {
-        Self{ context_name, filepath }
+    pub fn new(filepath: String) -> Self {
+        Self { filepath }
     }
 }
 
 impl Command for LoadStateCmd {
     fn get_context_name(&self) -> &str {
-        &self.context_name
+        "*"
     }
     fn get_keyword(&self) -> &'static str {
         "loadstate"
     }
     // if supplied a filename or use default
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        let mut split = args.split_whitespace();
-        match split.next() {
-            Some(filepath) => {
-                Ok(Box::new(Self::new(filepath.to_string())))
-            },
-            _ => Err(CmdError::NoFile),
+        match args.split_whitespace().nth(2) {
+            Some(filepath) => Ok(Box::new(Self::new(filepath.to_string()))),
+            _ => Err(CmdError::FileError()),
         }
     }
 
@@ -240,14 +226,15 @@ impl Command for LoadStateCmd {
         *state = serde_json::from_str(&contents).unwrap();
         Ok(())
     }
+
     fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         Ok(())
     }
+
     fn to_string(&self) -> String {
         format!("loadstate -f={}", self.filepath,)
     }
 }
-
 
 // All commands related to geometry state
 
@@ -255,8 +242,6 @@ impl Command for LoadStateCmd {
 #[derive(Debug, Default)]
 pub struct AddPointCmd {
     context_name: String,
-    /// Context on which to act
-    pub context: String,
     /// Index of the point added
     pub index: Option<usize>,
     pub group: usize,
@@ -264,9 +249,9 @@ pub struct AddPointCmd {
 }
 
 impl AddPointCmd {
-    pub fn new(context_name: String, context: String, group: usize, new_point: Point) -> Self {
-        Self{ context_name,
-            context,
+    pub fn new(context_name: String, group: usize, new_point: Point) -> Self {
+        Self {
+            context_name,
             index: None,
             group,
             new_point,
@@ -284,38 +269,52 @@ impl Command for AddPointCmd {
     // addpoint -g=3 -xy=20,30
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
         let mut split = args.split_whitespace();
+        let context_name = split
+            .next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing context name : {}", args)))?
+            .to_string();
+        // skip the command name
         split.next();
-        let group = split.next()
+        let group = split
+            .next()
             .ok_or_else(|| CmdError::Malformed(format!("missing group arg : {}", args)))?
             .parse::<usize>()
             .ok()
-            .ok_or(CmdError::Malformed(format!("group arg not usize : {}", args)))?;
+            .ok_or(CmdError::Malformed(format!(
+                "group arg not usize : {}",
+                args
+            )))?;
 
-        let xpos = split.next()
+        let xpos = split
+            .next()
             .ok_or_else(|| CmdError::Malformed(format!("missing xpos : {}", args)))?
             .parse::<f32>()
             .ok()
-            .ok_or(CmdError::Malformed(format!("xpos not parseable : {}", args)))?;
+            .ok_or(CmdError::Malformed(format!(
+                "xpos not parseable : {}",
+                args
+            )))?;
 
-        let ypos = split.next()
+        let ypos = split
+            .next()
             .ok_or_else(|| CmdError::Malformed(format!("missing ypos : {}", args)))?
             .parse::<f32>()
             .ok()
-            .ok_or(CmdError::Malformed(format!("ypos not parseable : {}", args)))?;
+            .ok_or(CmdError::Malformed(format!(
+                "ypos not parseable : {}",
+                args
+            )))?;
 
-        let zpos = split.next()
-            .unwrap_or("0.0")
-            .parse::<f32>()
-            .unwrap_or(0.0);
+        let zpos = split.next().unwrap_or("0.0").parse::<f32>().unwrap_or(0.0);
 
-        Ok(Box::new(Self::new(group, Point::new(xpos, ypos, zpos))))
+        Ok(Box::new(Self::new(context_name, group, Point::new(xpos, ypos, zpos))))
     }
     // const NAME: &str = "addpoint";
-    fn real_exec(&mut self, context : &mut Context) -> Result<(), CmdError> {
+    fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         // let group = get_group(state, self.index)?;
         // do this better
         if self.group >= context.geometry.groups.len() {
-            return Err("no such group"); //format!("no such group {}", self.to_string()));
+            return Err(CmdError::NoExecute("no such group".to_string())); //format!("no such group {}", self.to_string()));
         }
 
         let group = &mut context.geometry.groups[self.group];
@@ -327,8 +326,8 @@ impl Command for AddPointCmd {
         if group.previous_point.is_some() {
             // push the new point, but if is snapped, then dont...
             // add a new segment
-            state
-                .geom
+            context
+                .geometry
                 .segs
                 .push(Segment::new(group.previous_point.unwrap(), new_index));
             // add the segment to the group
@@ -358,7 +357,10 @@ pub struct RemovePointCmd {
 
 impl RemovePointCmd {
     pub fn new(context_name: String, group: usize) -> Self {
-        Self{ context_name, group }
+        Self {
+            context_name,
+            group,
+        }
     }
 }
 
@@ -371,9 +373,17 @@ impl Command for RemovePointCmd {
     }
 
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        if let Some(group) = args.split_whitespace().nth(1) {
+        let mut split = args.split_whitespace();
+        let context_name = split
+            .next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing context name : {}", args)))?
+            .to_string();
+
+        split.next();
+
+        if let Some(group) = split.next() {
             if let Ok(index) = group.parse::<usize>() {
-                Ok(Box::new(Self::new(index)))
+                Ok(Box::new(Self::new(context_name, index)))
             } else {
                 Err(CmdError::Malformed(args.to_string()))
             }
@@ -382,12 +392,12 @@ impl Command for RemovePointCmd {
         }
     }
 
-    fn real_exec(&mut self, context : &mut Context) -> Result<(), CmdError> {
+    fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         let group = context
             .geometry
             .groups
             .get_mut(self.group)
-            .ok_or("no such group")?;
+            .ok_or(CmdError::NoExecute("no such group".to_string()))?;
 
         if !group.segments.is_empty() {
             group.segments.pop();
@@ -419,7 +429,11 @@ pub struct BreakLineCmd {
 
 impl BreakLineCmd {
     pub fn new(context_name: String, group: usize, new_point: Point) -> Self {
-        Self{ context_name, group, new_point }
+        Self {
+            context_name,
+            group,
+            new_point,
+        }
     }
 }
 
@@ -433,7 +447,7 @@ impl Command for BreakLineCmd {
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
         Err(CmdError::NotImplemented(args.to_string()))
     }
-    fn real_exec(&mut self, context : &mut Context) -> Result<(), CmdError> {
+    fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         let group = &mut context.geometry.groups[self.group];
         context.geometry.points.push(Point::copy(&self.new_point));
         let new_index = context.geometry.points.len() - 1;
@@ -457,7 +471,7 @@ pub struct NewGroupCmd {
 
 impl NewGroupCmd {
     pub fn new(context_name: String) -> Self {
-        Self{ context_name }
+        Self { context_name }
     }
 }
 
@@ -469,12 +483,12 @@ impl Command for NewGroupCmd {
         "newgroup"
     }
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        match args.split_whitespace().nth(1) {
+        match args.split_whitespace().next() {
             Some(name) => Ok(Box::new(Self::new(name.to_string()))),
             None => Err(CmdError::NoContext("cant find context name".to_string())),
         }
     }
-    fn real_exec(&mut self, context : &mut Context) -> Result<(), CmdError> {
+    fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         let i = context.geometry.groups.len();
         context.geometry.groups.push(Group::new(i));
         Ok(())
@@ -495,7 +509,11 @@ pub struct NudgePointCmd {
 
 impl NudgePointCmd {
     pub fn new(context_name: String, point: usize, nudge: Point) -> Self {
-        Self{context_name, point, nudge }
+        Self {
+            context_name,
+            point,
+            nudge,
+        }
     }
 }
 
@@ -509,7 +527,7 @@ impl Command for NudgePointCmd {
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
         Err(CmdError::NotImplemented(args.to_string()))
     }
-    fn real_exec(&mut self, context : &mut Context) -> Result<(), CmdError> {
+    fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         // let mut point = &mut
         let i = self.point;
         context.geometry.points[i] += &self.nudge;
@@ -525,8 +543,8 @@ impl Command for NudgePointCmd {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-// spawn spawner_name node node_name arg value
-// spawn spawner_name graph iter-1011 segs-1017 enter-1015 brush-1014
+// spawn node_tree_name node node_name arg value
+// spawn node_tree_name graph iter-1011 segs-1017 enter-1015 brush-1014
 
 #[derive(Debug, Default)]
 pub struct SpawnerCommandDispatch {
@@ -546,16 +564,22 @@ impl SpawnerCommandDispatch {
     }
 
     pub fn populate(mut self) -> Self {
-        self.add_cmd(Box::new(SpawnerGraphCmd::new("blank".to_string(), "blank".to_string())));
+        self.add_cmd(Box::new(NodeTreeCmd::new(
+            "default".to_string(),
+            "blank".to_string(),
+            "blank".to_string(),
+        )));
         self
     }
 
-    pub fn add_spawner(&mut self, spawner: &Spawner) {
-        let nodes = spawner
-            .nodes.iter()
+    pub fn add_spawner(&mut self, node_tree: &NodeTree) {
+        let nodes = node_tree
+            .nodes
+            .iter()
             .map(|node| String::from(node.get_name()))
             .collect();
-        self.spawners_n_nodes.insert(String::from(spawner.get_name()), nodes);
+        self.spawners_n_nodes
+            .insert(String::from(node_tree.get_name()), nodes);
     }
     pub fn add_cmd(&mut self, cmd: Box<Command>) {
         self.sub_commands.insert(cmd.get_keyword(), cmd);
@@ -567,21 +591,23 @@ impl Command for SpawnerCommandDispatch {
         &self.context_name
     }
     fn get_keyword(&self) -> &'static str {
-        "spawn"
+        "tree"
     }
-    // spawn spawner_name subcommand args....
+    // spawn node_tree_name subcommand args....
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
         let mut split = args.split_whitespace();
-        let spawner_name = split.nth(1).ok_or_else(|| CmdError::NoSpawner(format!("missing spawner name {}", args)))?;
+        let node_tree_name = split
+            .nth(1)
+            .ok_or_else(|| CmdError::Malformed(format!("missing spawner name {}", args)))?;
 
-        if let Some(sp_cmd) = self.sub_commands.get(&spawner_name) {
+        if let Some(sp_cmd) = self.sub_commands.get(&node_tree_name) {
             sp_cmd.parse_string(args)
         } else {
-            Err(CmdError::NoSpawner(spawner_name.to_string()))
+            Err(CmdError::Malformed(node_tree_name.to_string()))
         }
     }
 
-    fn real_exec(&mut self, context : &mut Context) -> Result<(), CmdError> {
+    fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         // the dispatch should not have to execute anything, only dispatched commands will
         Ok(())
     }
@@ -593,19 +619,23 @@ impl Command for SpawnerCommandDispatch {
 
 //////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, Default)]
-pub struct SpawnerGraphCmd {
+pub struct NodeTreeCmd {
     context_name: String,
-    spawner_name: String,
+    node_tree_name: String,
     graph: String,
 }
 
-impl SpawnerGraphCmd {
-    pub fn new(context_name: String, spawner_name: String, graph: String) -> Self {
-        Self{context_name, spawner_name, graph}
+impl NodeTreeCmd {
+    pub fn new(context_name: String, node_tree_name: String, graph: String) -> Self {
+        Self {
+            context_name,
+            node_tree_name,
+            graph,
+        }
     }
 }
 
-impl Command for SpawnerGraphCmd {
+impl Command for NodeTreeCmd {
     fn get_context_name(&self) -> &str {
         &self.context_name
     }
@@ -613,9 +643,11 @@ impl Command for SpawnerGraphCmd {
         "graph"
     }
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
-        Err(CmdError::NotImplemented("spawnergraphcmd not implemented".to_string()))
+        Err(CmdError::NotImplemented(
+            "spawnergraphcmd not implemented".to_string(),
+        ))
     }
-    fn real_exec(&mut self, context : &mut Context) -> Result<(), CmdError> {
+    fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
         // parse the
         Ok(())
     }

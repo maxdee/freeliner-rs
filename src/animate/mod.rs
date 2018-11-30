@@ -12,42 +12,41 @@ pub use self::timer::Timer;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Animator {
     // timer: Timer,
-    // spawner: Spawner,
-    pub spawners: Vec<Spawner>,
+    // spawner: NodeTree,
+    pub node_trees: Vec<NodeTree>,
     pub temp: f32,
 }
 
 impl Default for Animator {
     fn default() -> Self {
-        let mut spawners = Vec::new();//
-        let mut spwnr = Spawner::new("aspawner".to_string());
+        let mut node_trees = Vec::new(); //
+        let mut spwnr = NodeTree::new("aspawner".to_string());
         spwnr.add_geom(0).setup_nodes();
         // spwnr.add_geom(0).add_geom(1).setup_nodes();
 
-        spawners.push(spwnr);
+        node_trees.push(spwnr);
         Self {
             // timer: Timer::default(),
-            spawners,
+            node_trees,
             temp: 0.0,
         }
     }
 }
 
-
-
 impl Animator {
-    pub fn animate(&mut self, geom: &Data) -> Vec<RenderItem> {
+    pub fn animate(&mut self, geom: &Geometry) -> Vec<RenderItem> {
         self.temp += 0.013;
         let lerp = self.temp.fract();
 
-        self.spawners.iter_mut()
+        self.node_trees
+            .iter_mut()
             .flat_map(|sp| sp.run(lerp, geom))
             .collect()
     }
 }
 
 // Render items get interpreted by the renderer to draw stuff on screen
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum RenderItem {
     Dot {
         pos: Point,
@@ -68,24 +67,23 @@ pub enum RenderItem {
     },
 }
 
-#[derive(Debug)]
-pub struct Spawner {
-    items: Vec<RenderItem>,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NodeTree {
+    // items: Vec<RenderItem>,
     groups: Vec<usize>,
+    #[serde(skip)]
     pub nodes: Vec<Box<Node>>,
     life: f32,
     name: String,
 }
 //
-// impl Default for Spawner {
+// impl Default for NodeTree {
 // }
 
-
 // spawner spawns events and passes it through a set of nodes and collects RenderItems
-impl Spawner {
+impl NodeTree {
     fn new(name: String) -> Self {
         Self {
-            items: Vec::new(),
             groups: Vec::new(),
             nodes: Vec::new(),
             life: 0.0,
@@ -100,19 +98,33 @@ impl Spawner {
         self
     }
     pub fn setup_nodes(&mut self) -> &mut Self {
-        self.nodes.push(Box::new(Iterate { count: 5, name: "iter".to_string()}));
-        self.nodes.push(Box::new(GroupPicker {name: "groups".to_string()}));
-        self.nodes.push(Box::new(SelectSegs {name: "segs".to_string()}));
-        self.nodes.push(Box::new(Enterpolator {name: "enter".to_string()}));
-        self.nodes.push(Box::new(DrawDot { size: 10.0, name: "brush".to_string()}));
+        self.nodes.push(Box::new(Iterate {
+            count: 5,
+            name: "iter".to_string(),
+        }));
+        self.nodes.push(Box::new(GroupPicker {
+            name: "groups".to_string(),
+        }));
+        self.nodes.push(Box::new(SelectSegs {
+            name: "segs".to_string(),
+        }));
+        self.nodes.push(Box::new(Enterpolator {
+            name: "enter".to_string(),
+        }));
+        self.nodes.push(Box::new(DrawDot {
+            size: 10.0,
+            name: "brush".to_string(),
+        }));
         // self.nodes.push(Box::new(SizeModulator {name: }));
-        self.nodes.push(Box::new(ExpandContract {name: "expand".to_string()}));
+        self.nodes.push(Box::new(ExpandContract {
+            name: "expand".to_string(),
+        }));
         self
     }
-    pub fn run(&mut self, unit: f32, geom: &Data) -> Vec<RenderItem> {
+    pub fn run(&mut self, unit: f32, geom: &Geometry) -> Vec<RenderItem> {
         // make a vec
         //
-        let starts:Vec<(usize, f32)> = self.groups.iter().map(|g| (*g, unit)).collect();
+        let starts: Vec<(usize, f32)> = self.groups.iter().map(|g| (*g, unit)).collect();
 
         if !geom.groups.is_empty() {
             return Vec::new();
