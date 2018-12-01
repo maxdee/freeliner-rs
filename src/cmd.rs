@@ -307,7 +307,11 @@ impl Command for AddPointCmd {
 
         let zpos = split.next().unwrap_or("0.0").parse::<f32>().unwrap_or(0.0);
 
-        Ok(Box::new(Self::new(context_name, group, Point::new(xpos, ypos, zpos))))
+        Ok(Box::new(Self::new(
+            context_name,
+            group,
+            Point::new(xpos, ypos, zpos),
+        )))
     }
     // const NAME: &str = "addpoint";
     fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
@@ -604,9 +608,9 @@ impl Command for NodeTreeCmdDispatch {
             .next()
             .ok_or_else(|| CmdError::Malformed(format!("missing node_tree name {}", args)))?;
 
-        let cmd_name = split
-            .next()
-            .ok_or_else(|| CmdError::Malformed(format!("missing node_tree command name {}", args)))?;
+        let cmd_name = split.next().ok_or_else(|| {
+            CmdError::Malformed(format!("missing node_tree command name {}", args))
+        })?;
 
         if let Some(sp_cmd) = self.sub_commands.get(&cmd_name) {
             sp_cmd.parse_string(args)
@@ -662,13 +666,19 @@ impl Command for NodeTreeCmd {
             .next()
             .ok_or_else(|| CmdError::Malformed(format!("missing tree name : {}", args)))?
             .to_string();
-
         // skip the graph
         split.next();
-        let mut graph = split
-            .fold(String::new(), |mut graph, node| {graph.push_str(node);graph.push(' '); graph});
+        let mut graph = split.fold(String::new(), |mut graph, node| {
+            graph.push_str(node);
+            graph.push(' ');
+            graph
+        });
 
-        Ok(Box::new(NodeTreeCmd::new(context_name, node_tree_name, graph)))
+        Ok(Box::new(NodeTreeCmd::new(
+            context_name,
+            node_tree_name,
+            graph,
+        )))
     }
 
     fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
@@ -677,9 +687,104 @@ impl Command for NodeTreeCmd {
             tree.parse_graph_string(self.graph.clone());
             Ok(())
         } else {
-            Err(CmdError::NoExecute(
-                format!("no graph tree found {}, perhaps create {}", self.node_tree_name, self.node_tree_name)
-            ))
+            Err(CmdError::NoExecute(format!(
+                "no graph tree found {}, perhaps create {}",
+                self.node_tree_name, self.node_tree_name
+            )))
+        }
+    }
+    fn to_string(&self) -> String {
+        "node tree making".to_string()
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default)]
+pub struct NodeParamCmd {
+    context_name: String,
+    tree_name: String,
+    node_id: usize,
+    param_name: String,
+    param_val: String,
+
+}
+
+impl NodeParamCmd {
+    pub fn new(context_name: String, tree_name: String, node_id: usize, param_name: String, param_val: String) -> Self {
+        Self {
+            context_name,
+            tree_name,
+            node_id,
+            param_name,
+            param_val,
+        }
+    }
+}
+
+impl Command for NodeParamCmd {
+    fn get_context_name(&self) -> &str {
+        &self.context_name
+    }
+    fn get_keyword(&self) -> &'static str {
+        "node"
+    }
+    fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
+        let mut split = args.split_whitespace();
+        let context_name = split
+            .next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing context name : {}", args)))?
+            .to_string();
+        // consume "tree"
+        split.next();
+        let tree_name = split
+            .next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing tree name : {}", args)))?
+            .to_string();
+        // skip the node keyword
+        split.next();
+        let node_id = split
+            .next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing node name : {}", args)))?
+            .split("-")
+            .nth(1)
+            .ok_or_else(|| CmdError::Malformed(format!("missing node id name : {}", args)))?
+            .parse::<usize>()
+            .ok()
+            .ok_or_else(|| CmdError::Malformed(format!("cant parse node id: {}", args)))?;
+
+        let param_name = split.next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing param name : {}", args)))?
+            .to_string();
+
+        let param_val = split.next()
+            .ok_or_else(|| CmdError::Malformed(format!("missing param val : {}", args)))?
+            .to_string();
+
+        Ok(Box::new(NodeParamCmd::new(
+            context_name,
+            tree_name,
+            node_id,
+            param_name,
+            param_val,
+        )))
+    }
+
+    fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
+        // fetch the tree
+        if let Some(tree) = context.animator.node_trees.get_mut(&self.tree_name) {
+            // fetch the node
+            if let Ok(node) = tree.get_node(self.node_id) {
+                // node.set_param(self.param_name, self.value)
+                println!("------------------- siiick setting {:?}", self);
+            } else {
+                // Err(CmdError::NoExecute("could not get node".to_string())
+            }
+            Ok(())
+        } else {
+            Err(CmdError::NoExecute(format!(
+                "no graph tree found {}, perhaps create {}",
+                self.tree_name, self.tree_name
+            )))
         }
     }
     fn to_string(&self) -> String {

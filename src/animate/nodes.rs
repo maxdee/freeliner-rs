@@ -1,4 +1,5 @@
 use super::super::geometry::*;
+use super::super::parameter::Param;
 use super::{Basket, RenderItem};
 use std::fmt::Debug;
 
@@ -21,7 +22,7 @@ pub struct SomeNode {
 /////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct Iterate {
-    pub count: u32,
+    pub count: Param<u32>,
     pub node_id: usize,
 }
 
@@ -33,9 +34,9 @@ impl Node for Iterate {
         "iter"
     }
     fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
-        let a = basket.unit / self.count as f32;
-        let i = 1.0 / self.count as f32;
-        basket.units = (0..self.count).map(|x| x as f32 * i + a).collect();
+        let a = basket.unit / self.count.value as f32;
+        let i = 1.0 / self.count.value as f32;
+        basket.units = (0..self.count.value).map(|x| x as f32 * i + a).collect();
         basket
     }
 }
@@ -86,12 +87,12 @@ impl Node for SelectSegs {
         //         .map(|s| (s, g.1)).collect()
         // }).flatten().collect();
         basket.groups.iter().for_each(|g| {
-            if geom.groups.len() > g.0{
+            if geom.groups.len() > g.0 {
                 if !geom.groups[g.0].segments.is_empty() {
                     geom.groups[g.0]
-                    .segments
-                    .iter()
-                    .for_each(|s| seg_list.push((*s, g.1)));
+                        .segments
+                        .iter()
+                        .for_each(|s| seg_list.push((*s, g.1)));
                 }
             }
         });
@@ -134,10 +135,9 @@ impl Node for Enterpolator {
 //////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct DrawDot {
-    pub size: f32,
+    pub size: Param<f32>,
     // some sort of keyframes
     pub node_id: usize,
-
 }
 
 impl Node for DrawDot {
@@ -153,7 +153,7 @@ impl Node for DrawDot {
             .iter()
             .map(|p| RenderItem::Dot {
                 pos: p.0.clone(),
-                size: self.size,
+                size: self.size.value,
                 unit: p.1,
             })
             .collect();
@@ -166,7 +166,6 @@ impl Node for DrawDot {
 pub struct SizeModulator {
     // some sort of keyframes
     pub node_id: usize,
-
 }
 
 impl SizeModulator {
@@ -209,7 +208,6 @@ impl Node for SizeModulator {
 pub struct ExpandContract {
     // some sort of keyframes
     pub node_id: usize,
-
 }
 
 // impl ExpandContract {

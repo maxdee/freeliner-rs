@@ -18,6 +18,7 @@ pub mod animate;
 pub mod cmd;
 pub mod geometry;
 pub mod input;
+pub mod parameter;
 // instance submodule,
 // pub mod instance;
 
@@ -25,9 +26,9 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 
 pub use self::animate::{Animator, RenderItem};
+pub use self::cmd::*;
 pub use self::geometry::Geometry;
 pub use self::input::Input;
-pub use self::cmd::*;
 
 pub struct Freeliner {
     pub input: Input,
@@ -40,7 +41,7 @@ impl Freeliner {
         self.state
             .context_map
             .iter_mut()
-            .flat_map(|ctx| ctx.1.animator.animate(&ctx.1.geometry) )
+            .flat_map(|ctx| ctx.1.animator.animate(&ctx.1.geometry))
             .collect()
     }
 }
@@ -56,7 +57,6 @@ impl Default for Freeliner {
 
         Freeliner { input, state }
     }
-
 }
 
 #[derive(Serialize, Deserialize)]

@@ -2,7 +2,6 @@ pub use super::State;
 pub use cmd::*;
 pub use geometry::Point;
 
-
 pub struct Input {
     pub cursor_position: Point,
     pub selected_group_index: usize,
@@ -12,7 +11,6 @@ pub struct Input {
     snap_list: Vec<(usize, f32)>,
     consumer: CommandConsumer,
     cmd_factory: CommandFactory,
-
 }
 
 // use enum instead
@@ -34,7 +32,6 @@ impl Input {
             consumer: CommandConsumer::default(),
             cmd_factory: CommandFactory::default().populate(),
             selected_context: "default".to_string(),
-
         }
     }
 
@@ -68,8 +65,10 @@ impl Input {
 
     fn handle_left_click(&mut self, state: &mut State, pos: Point) {
         let index = self.selected_group_index;
-        self.consumer
-            .exec(state, Box::new(AddPointCmd::new(self.selected_context.clone(), index, pos)));
+        self.consumer.exec(
+            state,
+            Box::new(AddPointCmd::new(self.selected_context.clone(), index, pos)),
+        );
         self.update_cursor_line(state);
     }
 
@@ -86,15 +85,19 @@ impl Input {
 
     fn handle_right_click(&mut self, state: &mut State, _pos: Point) {
         let index = self.selected_group_index;
-        self.consumer
-            .exec(state, Box::new(RemovePointCmd::new(self.selected_context.clone(), index)));
+        self.consumer.exec(
+            state,
+            Box::new(RemovePointCmd::new(self.selected_context.clone(), index)),
+        );
         self.update_cursor_line(state);
     }
 
     fn handle_middle_click(&mut self, state: &mut State, pos: Point) {
         let index = self.selected_group_index;
-        self.consumer
-            .exec(state, Box::new(BreakLineCmd::new(self.selected_context.clone(), index, pos)));
+        self.consumer.exec(
+            state,
+            Box::new(BreakLineCmd::new(self.selected_context.clone(), index, pos)),
+        );
         self.update_cursor_line(state);
     }
 
@@ -135,8 +138,10 @@ impl Input {
             let i = self.closest_snap();
             amount *= &Point::new_2d(10.0, 10.0);
             self.cursor_position += &amount;
-            self.consumer
-                .exec(state, Box::new(NudgePointCmd::new(self.selected_context.clone(), i, amount)));
+            self.consumer.exec(
+                state,
+                Box::new(NudgePointCmd::new(self.selected_context.clone(), i, amount)),
+            );
         }
     }
 
@@ -144,7 +149,10 @@ impl Input {
         match key {
             key if key == VirtualKeyCode::N as u32 => {
                 // println!("NEW group");
-                self.consumer.exec(state, Box::new(NewGroupCmd::new(self.selected_context.clone())));
+                self.consumer.exec(
+                    state,
+                    Box::new(NewGroupCmd::new(self.selected_context.clone())),
+                );
                 {
                     let context = state.get_context(&self.selected_context).unwrap();
                     self.selected_group_index = context.geometry.groups.len() - 1;

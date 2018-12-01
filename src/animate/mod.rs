@@ -1,4 +1,6 @@
 use super::geometry::*;
+use super::parameter::Param;
+
 // use std::fmt::Debug;
 pub mod nodes;
 pub mod timer;
@@ -103,57 +105,94 @@ impl NodeTree {
     }
     pub fn setup_nodes(&mut self) -> &mut Self {
         self.nodes.push(Box::new(Iterate {
-            count: 5,
+            count: Param {
+                name: "count".to_string(),
+                value: 5,
+                default: 5,
+            },
             node_id: 1,
         }));
-        self.nodes.push(Box::new(GroupPicker {
-            node_id: 2,
-        }));
-        self.nodes.push(Box::new(SelectSegs {
-            node_id: 3,
-        }));
-        self.nodes.push(Box::new(Enterpolator {
-            node_id: 4,
-        }));
+        self.nodes.push(Box::new(GroupPicker { node_id: 2 }));
+        self.nodes.push(Box::new(SelectSegs { node_id: 3 }));
+        self.nodes.push(Box::new(Enterpolator { node_id: 4 }));
         self.nodes.push(Box::new(DrawDot {
-            size: 10.0,
+            size: Param {
+                name: "size".to_string(),
+                value: 10.0,
+                default: 10.0,
+            },
             node_id: 5,
         }));
-        self.nodes.push(Box::new(ExpandContract {
-            node_id: 6,
-        }));
+        self.nodes.push(Box::new(ExpandContract { node_id: 6 }));
         self
     }
 
-    pub fn parse_graph_string(&mut self, graph_string: String) -> Result<(), String>{
+    pub fn parse_graph_string(&mut self, graph_string: String) -> Result<(), String> {
         // println!("Helloo im node tree and i parse {}", graph_string);
         self.nodes.clear();
-        let mut res = graph_string.split_whitespace()
+        let mut res = graph_string
+            .split_whitespace()
             // should be map and collect results
             .for_each(|node| self.add_node_from_string(node));
-            // .filter(|r| r.is_err());
+        // .filter(|r| r.is_err());
 
         println!("adding node: {:?}", self.nodes);
         Ok(())
     }
 
-    pub fn add_node_from_string(&mut self, node_string: &str) {// -> Result<(), String> {
+    pub fn add_node_from_string(&mut self, node_string: &str) {
+        // -> Result<(), String> {
         println!("{}", node_string);
         let mut split = node_string.split("-");
         let node_type = split.next().unwrap();
         let node_id = split.next().unwrap().parse::<usize>().unwrap();
         let mut node: Box<Node>;
         match node_type {
-            "iter" => node = Box::new(Iterate{count: 5, node_id}),
-            "groups" => node = Box::new(GroupPicker{node_id}),
-            "segs" => node = Box::new(SelectSegs{node_id}),
-            "enter" => node = Box::new(Enterpolator{node_id}),
-            "brush" => node = Box::new(DrawDot{size: 20.0, node_id}),
-            "sizemod" => node = Box::new(SizeModulator{node_id}),
-            "expand_contract" => node = Box::new(ExpandContract{node_id}),
-            _ => node = Box::new(Iterate{count: 5, node_id}),
+            "iter" => {
+                node = Box::new(Iterate {
+                    count: Param {
+                        name: "count".to_string(),
+                        value: 5,
+                        default: 5,
+                    },
+                    node_id,
+                })
+            }
+            "groups" => node = Box::new(GroupPicker { node_id }),
+            "segs" => node = Box::new(SelectSegs { node_id }),
+            "enter" => node = Box::new(Enterpolator { node_id }),
+            "brush" => {
+                node = Box::new(DrawDot {
+                    size: Param {
+                        name: "size".to_string(),
+                        value: 10.0,
+                        default: 10.0,
+                    },
+                    node_id,
+                })
+            }
+            "sizemod" => node = Box::new(SizeModulator { node_id }),
+            "expand_contract" => node = Box::new(ExpandContract { node_id }),
+            _ => node = Box::new(GroupPicker { node_id }),
         }
         self.nodes.push(node);
+    }
+
+    pub fn get_node(&mut self, node_id: usize) -> Result<&mut Box<Node>, &str> {
+        for node in self.nodes.iter_mut() {
+            if node.get_id() == node_id {
+                return Ok(node);
+            }
+        }
+        Err("no node")
+        // let mut nodes: Vec<Box<Node>> = self.nodes.iter_mut()
+        //     .filter(|n| n.get_id() == node_id)
+        //     .collect();
+        // if let Some(node) = nodes.get(0) {
+        //     Ok(&mut node)
+        // }
+        // else {
+        // }
     }
 
     pub fn run(&mut self, unit: f32, geom: &Geometry) -> Vec<RenderItem> {
@@ -164,7 +203,6 @@ impl NodeTree {
         if geom.groups.is_empty() {
             return Vec::new();
         }
-
 
         let mut basket = Basket {
             mode: BasketModes::Loop,
