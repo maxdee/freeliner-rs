@@ -8,6 +8,7 @@ pub trait Node: Debug {
     fn do_thing(&self, basket: Basket, geom: &Geometry) -> Basket;
     fn get_name(&self) -> &str;
     fn get_id(&self) -> usize;
+    fn set_param(&mut self, param_name: &str, param_val: &str) -> Result<(), &str>;
 }
 
 /*
@@ -18,12 +19,29 @@ pub struct SomeNode {
     fun_slider: f32,   // slider
 }
 */
+// pub fn set_param<T>(node: &mut T, param_name : &str, param_val: &str)
+//     where T : Node {
+//         node.set_param()
+// }
 
 /////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct Iterate {
     pub count: Param<u32>,
     pub node_id: usize,
+}
+
+impl Iterate {
+    pub fn new(node_id: usize) -> Self {
+        Self {
+            count: Param {
+                name: "count".to_string(),
+                value: 5,
+                default: 5,
+            },
+            node_id,
+        }
+    }
 }
 
 impl Node for Iterate {
@@ -34,10 +52,18 @@ impl Node for Iterate {
         "iter"
     }
     fn do_thing(&self, mut basket: Basket, _geom: &Geometry) -> Basket {
-        let a = basket.unit / self.count.value as f32;
-        let i = 1.0 / self.count.value as f32;
+        let count = self.count.value as f32;
+        let a = basket.unit / count;
+        let i = 1.0 / count;
         basket.units = (0..self.count.value).map(|x| x as f32 * i + a).collect();
         basket
+    }
+    fn set_param(&mut self, param_name: &str, param_val: &str) -> Result<(), &str> {
+        match param_name {
+            "count" => self.count.parse_string(param_val),
+            _ => (),
+        }
+        Ok(())
     }
 }
 
@@ -45,6 +71,14 @@ impl Node for Iterate {
 #[derive(Debug)]
 pub struct GroupPicker {
     pub node_id: usize,
+}
+
+impl GroupPicker {
+    pub fn new(node_id: usize) -> Self {
+        Self {
+            node_id,
+        }
+    }
 }
 
 impl Node for GroupPicker {
@@ -63,12 +97,23 @@ impl Node for GroupPicker {
         basket.groups = group_list;
         basket
     }
+    fn set_param(&mut self, param_name: &str, param_val: &str) -> Result<(), &str> {
+        Ok(())
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct SelectSegs {
     pub node_id: usize,
+}
+
+impl SelectSegs {
+    pub fn new(node_id: usize) -> Self {
+        Self {
+            node_id,
+        }
+    }
 }
 
 impl Node for SelectSegs {
@@ -100,6 +145,9 @@ impl Node for SelectSegs {
         basket.segments = seg_list;
         basket
     }
+    fn set_param(&mut self, param_name: &str, param_val: &str) -> Result<(), &str> {
+        Ok(())
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -130,6 +178,9 @@ impl Node for Enterpolator {
             .collect();
         basket
     }
+    fn set_param(&mut self, param_name: &str, param_val: &str) -> Result<(), &str> {
+        Ok(())
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -158,6 +209,13 @@ impl Node for DrawDot {
             })
             .collect();
         basket
+    }
+    fn set_param(&mut self, param_name: &str, param_val: &str) -> Result<(), &str> {
+        match param_name {
+            "size" => self.size.parse_string(param_val),
+            _ => (),
+        }
+        Ok(())
     }
 }
 
@@ -201,6 +259,9 @@ impl Node for SizeModulator {
             });
         }
         basket
+    }
+    fn set_param(&mut self, param_name: &str, param_val: &str) -> Result<(), &str> {
+        Ok(())
     }
 }
 //////////////////////////////////////////////////////////////////////////////////
@@ -262,5 +323,8 @@ impl Node for ExpandContract {
             // });
         }
         basket
+    }
+    fn set_param(&mut self, param_name: &str, param_val: &str) -> Result<(), &str> {
+        Ok(())
     }
 }

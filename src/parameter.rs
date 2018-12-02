@@ -48,18 +48,19 @@ pub struct Param<T> {
 }
 
 impl<T> Param<T> {
-    fn get_name(&self) -> &str {
+    pub fn get_name(&self) -> &str {
         &self.name
     }
-    fn get_value(&self) -> &T {
+    pub fn get_value(&self) -> &T {
         &self.value
     }
-    fn parse_string(&mut self, string: &str)
+    pub fn parse_string(&mut self, string: &str)
     where
-        T: std::str::FromStr + Copy,
+        T: std::str::FromStr + Copy + std::fmt::Display,
     {
         if let Ok(val) = string.parse::<T>() {
             self.value = val;
+            println!("param {} set to {}", self.name, self.value);
         } else {
             self.value = self.default;
         }

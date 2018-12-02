@@ -104,14 +104,7 @@ impl NodeTree {
         self
     }
     pub fn setup_nodes(&mut self) -> &mut Self {
-        self.nodes.push(Box::new(Iterate {
-            count: Param {
-                name: "count".to_string(),
-                value: 5,
-                default: 5,
-            },
-            node_id: 1,
-        }));
+        self.nodes.push(Box::new(Iterate::new(1)));
         self.nodes.push(Box::new(GroupPicker { node_id: 2 }));
         self.nodes.push(Box::new(SelectSegs { node_id: 3 }));
         self.nodes.push(Box::new(Enterpolator { node_id: 4 }));
@@ -135,14 +128,11 @@ impl NodeTree {
             // should be map and collect results
             .for_each(|node| self.add_node_from_string(node));
         // .filter(|r| r.is_err());
-
-        println!("adding node: {:?}", self.nodes);
         Ok(())
     }
 
     pub fn add_node_from_string(&mut self, node_string: &str) {
         // -> Result<(), String> {
-        println!("{}", node_string);
         let mut split = node_string.split("-");
         let node_type = split.next().unwrap();
         let node_id = split.next().unwrap().parse::<usize>().unwrap();

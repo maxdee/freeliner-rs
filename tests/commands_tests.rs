@@ -64,3 +64,22 @@ pub fn node_tree_graph_cmd() {
     let context = freeliner.state.get_context("default").unwrap();
     assert_eq!(1013, context.animator.node_trees.get("A").unwrap().nodes.get(1).unwrap().get_id());
 }
+
+
+#[test]
+pub fn node_tree_param_cmd() {
+    let mut freeliner = common::setup_freeliner();
+    freeliner.input.string_command(&mut freeliner.state,
+        "default tree A graph iter-1010 segs-1013 enter-1012 brush-1011".to_string());
+    freeliner.input.string_command(&mut freeliner.state,
+        "default tree A node brush-1011 size 42.0".to_string());
+
+    let context = freeliner.state.get_context("default").unwrap();
+    // let node: freeliner::animate::nodes::DrawDot = context.animator.node_trees
+    //     .get("A")
+    //     .unwrap()
+    //     .nodes.get(3)
+    //     .unwrap();
+    // assert_eq!(42, node.size.get_value());
+    assert!(true);
+}

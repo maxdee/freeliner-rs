@@ -573,6 +573,13 @@ impl NodeTreeCmdDispatch {
             "blank".to_string(),
             "blank".to_string(),
         )));
+        self.add_cmd(Box::new(NodeParamCmd::new(
+            "default".to_string(),
+            "blank".to_string(),
+            0,
+            "blank".to_string(),
+            "blank".to_string(),
+        )));
         self
     }
     pub fn add_cmd(&mut self, cmd: Box<Command>) {
@@ -728,6 +735,7 @@ impl Command for NodeParamCmd {
     fn get_keyword(&self) -> &'static str {
         "node"
     }
+    // default tree A node brush-1011 size 42.0
     fn parse_string(&self, args: &str) -> Result<Box<Command>, CmdError> {
         let mut split = args.split_whitespace();
         let context_name = split
@@ -760,13 +768,14 @@ impl Command for NodeParamCmd {
             .ok_or_else(|| CmdError::Malformed(format!("missing param val : {}", args)))?
             .to_string();
 
-        Ok(Box::new(NodeParamCmd::new(
+        let mut cmd = Box::new(NodeParamCmd::new(
             context_name,
             tree_name,
             node_id,
             param_name,
             param_val,
-        )))
+        ));
+        Ok(cmd)
     }
 
     fn real_exec(&mut self, context: &mut Context) -> Result<(), CmdError> {
@@ -774,8 +783,7 @@ impl Command for NodeParamCmd {
         if let Some(tree) = context.animator.node_trees.get_mut(&self.tree_name) {
             // fetch the node
             if let Ok(node) = tree.get_node(self.node_id) {
-                // node.set_param(self.param_name, self.value)
-                println!("------------------- siiick setting {:?}", self);
+                node.set_param(&self.param_name, &self.param_val);
             } else {
                 // Err(CmdError::NoExecute("could not get node".to_string())
             }
